@@ -1,1487 +1,1770 @@
 {
-	"info": {
-		"_postman_id": "71fd1a6f-795b-48bc-9026-c89927fb4f3c",
-		"name": "HCERT X-Road",
-		"description": "# HCERT FHIR API demo collection\n\nThis collection provides sample requests for HCERT service over X-road. Additionally MPI requests provided for querying patient, AUTH for authorization.\n\nCurrently it covers use-cases for TEIS (occupational certificates) and Healthcare providers (driver certificates).\n\n## Requirements\n\n1. Ask TEHIK IT support ([itabi@tehik.ee](https://mailto:itabi@tehik.ee)) for x-road access rights to the following services:\n    \n    1. **GOV/70009770/tis/fhir** - FHIR intermediary server (HCERT and MPI queries)\n        \n    2. **GOV/70009770/tis/auth** - AUTH ehk autoriseerimise teenus (token-te pärimine)\n        \n2. Adjust collection variables (root folder -> Variables):\n    \n    1. **X_ROAD_SERVER_URL** - your security server url\n        \n    2. **X_ROAD_CLIENT** - your x-road client\n        \n3. Healthcare providers (TTO) should use their own doctor-organization combination that exist in MEDRE for AUTH queries (token requests with role **doctor**). TEHIK IT support should be able to help with creating new entries in dev/test MEDRE.\n    \n\n## Structure and usage\n\nUse case examples are divided into folders, title defines what it does and by which role operations are performed. First query inside each folder is token request for specific role. Token is saved to collection variables and lasts 5 minutes. Any request made with invalid (timed out) token receives 401 error.\n\n### TEIS specific folders\n\nThere are 2 TEIS specific folders (**2\\. Occupational certs queried by employer** and **3\\. Occupational certs queried by government official**) to demonstrate usage of gov-official and org-legal-representative role and HCERT queries for querying occupational certificates by official (i.e auditor) and employer representative. These roles are allowed only for TEIS x-road client (in case any errors, please contact IT support).\n\nIn order to receive any data, some occupational certificates should be created for Emloyer organization code defined via **EMPLOYER_CODE** collection variable. Ask TEHIK to create some examples for specific organization.\n\n## Important notes\n\nHealthcare providers should use different patients in their test, change **EST_PATIENT_CODE2** collection variable.",
-		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-		"_exporter_id": "5159090"
-	},
-	"item": [
-		{
-			"name": "1. Create occupational certificate by doctor",
-			"item": [
-				{
-					"name": "1.1 Doctor token",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.collectionVariables.set(\"doctor_token\", pm.response.json().accessToken);",
-									""
-								],
-								"type": "text/javascript",
-								"packages": {},
-								"requests": {}
-							}
-						},
-						{
-							"listen": "prerequest",
-							"script": {
-								"exec": [
-									""
-								],
-								"type": "text/javascript",
-								"packages": {},
-								"requests": {}
-							}
-						}
-					],
-					"request": {
-						"auth": {
-							"type": "noauth"
-						},
-						"method": "POST",
-						"header": [
-							{
-								"key": "x-road-client",
-								"value": "{{X_ROAD_ENV}}/{{X_ROAD_CLIENT}}",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"user\": {\n    \"personalCode\": \"45007090928\"\n  },\n  \"organization\": \"70009770\",\n  \"role\": \"doctor\",\n  \"application\": \"test-app\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{X_ROAD_SERVER_URL}}/r1/{{X_ROAD_ENV}}/{{X_ROAD_AUTH_SERVICE}}/v2/token",
-							"host": [
-								"{{X_ROAD_SERVER_URL}}"
-							],
-							"path": [
-								"r1",
-								"{{X_ROAD_ENV}}",
-								"{{X_ROAD_AUTH_SERVICE}}",
-								"v2",
-								"token"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "1.2 Search Patient by identifier",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Should return 200\", () => {",
-									"    pm.response.to.have.status(200);",
-									"});",
-									"",
-									"pm.test(\"Total should be 1\", () => {",
-									"    const jsonData = pm.response.json();",
-									"    pm.expect(jsonData.total).to.eql(1);",
-									"});",
-									"",
-									"",
-									"const responseData = pm.response.json();",
-									"const patientReference = responseData.entry[0].resource.id;",
-									"pm.collectionVariables.set(\"PATIENT_ID\", patientReference);"
-								],
-								"type": "text/javascript",
-								"packages": {},
-								"requests": {}
-							}
-						},
-						{
-							"listen": "prerequest",
-							"script": {
-								"exec": [
-									""
-								],
-								"type": "text/javascript",
-								"packages": {},
-								"requests": {}
-							}
-						}
-					],
-					"request": {
-						"auth": {
-							"type": "noauth"
-						},
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{doctor_token}}",
-								"type": "text"
-							},
-							{
-								"key": "x-road-client",
-								"value": "{{X_ROAD_ENV}}/{{X_ROAD_CLIENT}}",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{X_ROAD_SERVER_URL}}/r1/{{X_ROAD_ENV}}/{{X_ROAD_MPI_SERVICE}}/Patient?identifier={{EST_PATIENT_CODE}}",
-							"host": [
-								"{{X_ROAD_SERVER_URL}}"
-							],
-							"path": [
-								"r1",
-								"{{X_ROAD_ENV}}",
-								"{{X_ROAD_MPI_SERVICE}}",
-								"Patient"
-							],
-							"query": [
-								{
-									"key": "identifier",
-									"value": "{{EST_PATIENT_CODE}}"
-								}
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "1.3 Create final certificate",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									""
-								],
-								"type": "text/javascript",
-								"packages": {},
-								"requests": {}
-							}
-						},
-						{
-							"listen": "prerequest",
-							"script": {
-								"exec": [
-									"const uuid = pm.variables.replaceIn('{{$randomUUID}}');",
-									"pm.collectionVariables.set(\"DOC_NUMBER\", uuid);"
-								],
-								"type": "text/javascript",
-								"packages": {},
-								"requests": {}
-							}
-						}
-					],
-					"request": {
-						"auth": {
-							"type": "noauth"
-						},
-						"method": "POST",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{doctor_token}}",
-								"type": "text"
-							},
-							{
-								"key": "Prefer",
-								"value": "return=representation",
-								"type": "text"
-							},
-							{
-								"key": "x-road-client",
-								"value": "{{X_ROAD_ENV}}/{{X_ROAD_CLIENT}}",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"resourceType\": \"Composition\",\n    \"meta\": {\n        \"profile\": [\n            \"https://fhir.ee/hcert/StructureDefinition/ee-health-certificate-occupational\"\n        ]\n    },\n    \"contained\": [\n        {\n            \"resourceType\": \"PractitionerRole\",\n            \"id\": \"pract-role\",\n            \"practitioner\": {\n                \"reference\": \"Practitioner/45007090928\"\n            },\n            \"organization\": {\n                \"reference\": \"Organization/70009770\"\n            }\n        },\n        {\n            \"resourceType\": \"Observation\",\n            \"id\": \"employment\",\n            \"meta\": {\n                \"profile\": [\n                    \"https://fhir.ee/hcert/StructureDefinition/ee-health-certificate-occupational-employment\"\n                ]\n            },\n            \"status\": \"final\",\n            \"code\": {\n                \"coding\": [\n                    {\n                        \"system\": \"http://snomed.info/sct\",\n                        \"code\": \"184104002\",\n                        \"display\": \"Patient occupation\"\n                    }\n                ]\n            },\n            \"performer\": [\n                {\n                    \"identifier\": {\n                        \"system\": \"https://fhir.ee/sid/org/est/br\",\n                        \"value\": \"16978044\"\n                    },\n                    \"display\": \"KORTERIÜHISTU\"\n                }\n            ],\n            \"component\": [\n                {\n                    \"code\": {\n                        \"coding\": [\n                            {\n                                \"system\": \"http://snomed.info/sct\",\n                                \"code\": \"160922003\",\n                                \"display\": \"Job details\"\n                            }\n                        ]\n                    },\n                    \"valueCodeableConcept\": {\n                        \"coding\": [\n                            {\n                                \"system\": \"https://fhir.ee/CodeSystem/ametite-klassifikaator\",\n                                \"code\": \"22220101\"\n                            }\n                        ]\n                    }\n                },\n                {\n                    \"code\": {\n                        \"coding\": [\n                            {\n                                \"system\": \"http://snomed.info/sct\",\n                                \"code\": \"224374003\",\n                                \"display\": \"Regularity of work\"\n                            }\n                        ]\n                    },\n                    \"valueQuantity\": {\n                        \"value\": 0.75,\n                        \"system\": \"http://unitsofmeasure.org\",\n                        \"code\": \"1\"\n                    }\n                }\n            ]\n        },\n        {\n            \"resourceType\": \"Observation\",\n            \"id\": \"400\",\n            \"meta\": {\n                \"profile\": [\n                    \"https://fhir.ee/hcert/StructureDefinition/ee-health-certificate-decision\"\n                ]\n            },\n            \"status\": \"final\",\n            \"code\": {\n                \"coding\": [\n                    {\n                        \"system\": \"http://snomed.info/sct\",\n                        \"code\": \"419183001\",\n                        \"display\": \"Practitioner decision status\"\n                    }\n                ]\n            },\n            \"valueCodeableConcept\": {\n                \"coding\": [\n                    {\n                        \"system\": \"http://snomed.info/sct\",\n                        \"code\": \"160910001\"\n                    }\n                ]\n            }\n        },\n        {\n            \"resourceType\": \"Observation\",\n            \"id\": \"med-restrictions\",\n            \"meta\": {\n                \"profile\": [\n                    \"https://fhir.ee/hcert/StructureDefinition/ee-health-certificate-medical-restriction\"\n                ]\n            },\n            \"status\": \"final\",\n            \"code\": {\n                \"coding\": [\n                    {\n                        \"system\": \"http://snomed.info/sct\",\n                        \"code\": \"146861000181105\",\n                        \"display\": \"Restriction\"\n                    }\n                ]\n            },\n            \"component\": [\n                {\n                    \"code\": {\n                        \"coding\": [\n                            {\n                                \"system\": \"https://fhir.ee/CodeSystem/tervisetoendi-piirangud\",\n                                \"code\": \"750\"\n                            }\n                        ]\n                    },\n                    \"valueCodeableConcept\": {\n                        \"coding\": [\n                            {\n                                \"system\": \"https://fhir.ee/CodeSystem/toolaadi-ja-tookeskkonnaga-seotud-ohutegurid\",\n                                \"code\": \"114\",\n                                \"display\": \"Kantserogeenid\"\n                            }\n                        ]\n                    }\n                }\n            ],\n            \"note\": [\n                {\n                    \"text\": \"some text 1\"\n                }\n            ]\n        },\n        {\n            \"resourceType\": \"Observation\",\n            \"id\": \"med-restrictions-2\",\n            \"meta\": {\n                \"profile\": [\n                    \"https://fhir.ee/hcert/StructureDefinition/ee-health-certificate-medical-restriction\"\n                ]\n            },\n            \"status\": \"final\",\n            \"code\": {\n                \"coding\": [\n                    {\n                        \"system\": \"http://snomed.info/sct\",\n                        \"code\": \"146861000181105\",\n                        \"display\": \"Restriction\"\n                    }\n                ]\n            },\n            \"component\": [\n                {\n                    \"code\": {\n                        \"coding\": [\n                            {\n                                \"system\": \"https://fhir.ee/CodeSystem/tervisetoendi-piirangud\",\n                                \"code\": \"586\"\n                            }\n                        ]\n                    },\n                    \"valueQuantity\": {\n                        \"value\": 10,\n                        \"system\": \"http://unitsofmeasure.org\",\n                        \"code\": \"kg\"\n                    }\n                }\n            ],\n            \"note\": [\n                {\n                    \"text\": \"some text 2\"\n                }\n            ]\n        },\n        {\n            \"resourceType\": \"Observation\",\n            \"id\": \"risk-factors\",\n            \"meta\": {\n                \"profile\": [\n                    \"https://fhir.ee/hcert/StructureDefinition/ee-health-certificate-work-related-risk-factor\"\n                ]\n            },\n            \"status\": \"final\",\n            \"code\": {\n                \"coding\": [\n                    {\n                        \"system\": \"http://snomed.info/sct\",\n                        \"code\": \"80943009\",\n                        \"display\": \"Risk factor\"\n                    }\n                ]\n            },\n            \"valueCodeableConcept\": {\n                \"coding\": [\n                    {\n                        \"system\": \"https://fhir.ee/CodeSystem/toolaadi-ja-tookeskkonnaga-seotud-ohutegurid\",\n                        \"code\": \"558\"\n                    }\n                ]\n            }\n        },\n        {\n            \"resourceType\": \"Observation\",\n            \"id\": \"add-conditions\",\n            \"meta\": {\n                \"profile\": [\n                    \"https://fhir.ee/hcert/StructureDefinition/ee-health-certificate-work-additional-condition\"\n                ]\n            },\n            \"status\": \"final\",\n            \"code\": {\n                \"coding\": [\n                    {\n                        \"system\": \"http://snomed.info/sct\",\n                        \"code\": \"225891002\",\n                        \"display\": \"Fit for work with certain limitations\"\n                    }\n                ]\n            },\n            \"valueCodeableConcept\": {\n                \"coding\": [\n                    {\n                        \"system\": \"https://fhir.ee/CodeSystem/tootamiseks-vajalikud-lisatingimused\",\n                        \"code\": \"work-environment\"\n                    }\n                ]\n            }\n        },\n        {\n            \"resourceType\": \"Observation\",\n            \"id\": \"add-conditions-2\",\n            \"meta\": {\n                \"profile\": [\n                    \"https://fhir.ee/hcert/StructureDefinition/ee-health-certificate-work-additional-condition\"\n                ]\n            },\n            \"status\": \"final\",\n            \"code\": {\n                \"coding\": [\n                    {\n                        \"system\": \"http://snomed.info/sct\",\n                        \"code\": \"225891002\",\n                        \"display\": \"Fit for work with certain limitations\"\n                    }\n                ]\n            },\n            \"valueCodeableConcept\": {\n                \"coding\": [\n                    {\n                        \"system\": \"https://fhir.ee/CodeSystem/tootamiseks-vajalikud-lisatingimused\",\n                        \"code\": \"personal-protective-equipment\"\n                    }\n                ]\n            }\n        }\n    ],\n    \"identifier\": [\n        {\n            \"system\": \"https://fhir.ee/hcert/health-certificate-number\",\n            \"value\": \"HCERT-{{DOC_NUMBER}}\"\n        }\n    ], \n    \"status\": \"final\",\n    \"type\": {\n        \"coding\": [\n            {\n                \"system\": \"http://snomed.info/sct\",\n                \"code\": \"772786005\",\n                \"display\": \"Medical certificate (record artifact)\"\n            }\n        ]\n    },\n    \"category\": [\n        {\n            \"coding\": [\n                {\n                    \"system\": \"https://fhir.ee/CodeSystem/labivaatuse-tyyp\",\n                    \"code\": \"occupational\"\n                }\n            ]\n        }\n    ],\n    \"subject\": [\n        {\n            \"reference\": \"Patient/{{PATIENT_ID}}\"\n        }\n    ],\n    \"date\": \"2025-11-26T00:00:00.000+00:00\",\n    \"author\": [\n        {\n            \"reference\": \"#pract-role\"\n        }\n    ],\n    \"title\": \"Töötervishoiu tervisekontrolli otsus xxxx\",\n    \"event\": [\n        {\n            \"period\": {\n                \"start\": \"2025-11-26T00:00:00.000+00:00\",\n                \"end\": \"2028-11-26T00:00:00.000+00:00\"\n            }\n        }\n    ],\n    \"section\": [\n        {\n            \"code\": {\n                \"coding\": [\n                    {\n                        \"system\": \"https://fhir.ee/CodeSystem/tervisetoendi-sektsioon\",\n                        \"code\": \"health-declaration\"\n                    }\n                ]\n            },\n            \"entry\": [\n                {\n                    \"identifier\": {\n                        \"system\": \"https://fhir.ee/hcert/health-declaration-external-document-number\",\n                        \"value\": \"doc-12345\"\n                    }\n                }\n            ]\n        },\n        {\n            \"code\": {\n                \"coding\": [\n                    {\n                        \"system\": \"https://fhir.ee/CodeSystem/tervisetoendi-sektsioon\",\n                        \"code\": \"employer\"\n                    }\n                ]\n            },\n            \"text\": {\n                \"status\": \"additional\",\n                \"div\": \"<div xmlns=\\\"http://www.w3.org/1999/xhtml\\\">16978044</div>\"\n            },\n            \"entry\": [\n                {\n                    \"reference\": \"#employment\"\n                }\n            ]\n        },\n        {\n            \"code\": {\n                \"coding\": [\n                    {\n                        \"system\": \"https://fhir.ee/CodeSystem/tervisetoendi-sektsioon\",\n                        \"code\": \"decision\"\n                    }\n                ]\n            },\n            \"entry\": [\n                {\n                    \"reference\": \"#400\"\n                }\n            ]\n        },\n        {\n            \"code\": {\n                \"coding\": [\n                    {\n                        \"system\": \"https://fhir.ee/CodeSystem/tervisetoendi-sektsioon\",\n                        \"code\": \"medical-restrictions\"\n                    }\n                ]\n            },\n            \"entry\": [\n                {\n                    \"reference\": \"#med-restrictions\"\n                },\n                {\n                    \"reference\": \"#med-restrictions-2\"\n                }\n            ]\n        },\n        {\n            \"code\": {\n                \"coding\": [\n                    {\n                        \"system\": \"https://fhir.ee/CodeSystem/tervisetoendi-sektsioon\",\n                        \"code\": \"risk-factors\"\n                    }\n                ]\n            },\n            \"entry\": [\n                {\n                    \"reference\": \"#risk-factors\"\n                }\n            ]\n        },\n        {\n            \"code\": {\n                \"coding\": [\n                    {\n                        \"system\": \"https://fhir.ee/CodeSystem/tervisetoendi-sektsioon\",\n                        \"code\": \"work-additional-restrictions\"\n                    }\n                ]\n            },\n            \"entry\": [\n                {\n                    \"reference\": \"#add-conditions\"\n                },\n                {\n                    \"reference\": \"#add-conditions-2\"\n                }\n            ],\n            \"text\": {\n                \"status\": \"additional\",\n                \"div\": \"<div xmlns=\\\"http://www.w3.org/1999/xhtml\\\">Tekst mis kirjeldab lisatingumusi</div>\"\n            }\n        },\n        {\n            \"code\": {\n                \"coding\": [\n                    {\n                        \"system\": \"https://fhir.ee/CodeSystem/tervisetoendi-sektsioon\",\n                        \"code\": \"shortened-reason\"\n                    }\n                ]\n            },\n            \"text\": {\n                \"status\": \"additional\",\n                \"div\": \"<div xmlns=\\\"http://www.w3.org/1999/xhtml\\\">shortened p6hjus</div>\"\n            }\n        },\n        {\n            \"code\": {\n                \"coding\": [\n                    {\n                        \"system\": \"https://fhir.ee/CodeSystem/tervisetoendi-sektsioon\",\n                        \"code\": \"reject-reason\"\n                    }\n                ]\n            },\n            \"text\": {\n                \"status\": \"additional\",\n                \"div\": \"<div xmlns=\\\"http://www.w3.org/1999/xhtml\\\">reject p6hjus</div>\"\n            }\n        },\n        {\n            \"code\": {\n                \"coding\": [\n                    {\n                        \"system\": \"https://fhir.ee/CodeSystem/tervisetoendi-sektsioon\",\n                        \"code\": \"change-reason\"\n                    }\n                ]\n            },\n            \"text\": {\n                \"status\": \"additional\",\n                \"div\": \"<div xmlns=\\\"http://www.w3.org/1999/xhtml\\\">muutmise p6hjus</div>\"\n            }\n        },\n        {\n            \"code\": {\n                \"coding\": [\n                    {\n                        \"system\": \"https://fhir.ee/CodeSystem/tervisetoendi-sektsioon\",\n                        \"code\": \"employer-suggestions\"\n                    }\n                ]\n            },\n            \"text\": {\n                \"status\": \"additional\",\n                \"div\": \"<div xmlns=\\\"http://www.w3.org/1999/xhtml\\\">Ettepanekud tööandjale</div>\"\n            }\n        },\n        {\n            \"code\": {\n                \"coding\": [\n                    {\n                        \"system\": \"https://fhir.ee/CodeSystem/tervisetoendi-sektsioon\",\n                        \"code\": \"employee-suggestions\"\n                    }\n                ]\n            },\n            \"text\": {\n                \"status\": \"additional\",\n                \"div\": \"<div xmlns=\\\"http://www.w3.org/1999/xhtml\\\">Ettepanekud töötajale</div>\"\n            }\n        }\n    ]\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{X_ROAD_SERVER_URL}}/r1/{{X_ROAD_ENV}}/{{X_ROAD_HCERT_SERVICE}}/Composition",
-							"host": [
-								"{{X_ROAD_SERVER_URL}}"
-							],
-							"path": [
-								"r1",
-								"{{X_ROAD_ENV}}",
-								"{{X_ROAD_HCERT_SERVICE}}",
-								"Composition"
-							]
-						}
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "2. Occupational certs queried by employer",
-			"item": [
-				{
-					"name": "2.1 Get token as employer (org legal representative)",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.collectionVariables.set(\"org_legal_rep_token\", pm.response.json().accessToken);",
-									""
-								],
-								"type": "text/javascript",
-								"packages": {},
-								"requests": {}
-							}
-						},
-						{
-							"listen": "prerequest",
-							"script": {
-								"exec": [
-									""
-								],
-								"type": "text/javascript",
-								"packages": {},
-								"requests": {}
-							}
-						}
-					],
-					"request": {
-						"auth": {
-							"type": "noauth"
-						},
-						"method": "POST",
-						"header": [
-							{
-								"key": "x-road-client",
-								"value": "{{X_ROAD_ENV}}/{{X_ROAD_CLIENT}}",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"user\": {\n    \"personalCode\": \"36201182245\"\n  },\n  \"organization\": \"70009770\", // should match with xroad client organization\n  \"representedParty\": \"{{EMPLOYER_CODE}}\", // should match with organization user repesents (employer org)\n  \"role\": \"org-legal-representative\",\n  \"application\": \"teis-app\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{X_ROAD_SERVER_URL}}/r1/{{X_ROAD_ENV}}/{{X_ROAD_AUTH_SERVICE}}/v2/token",
-							"host": [
-								"{{X_ROAD_SERVER_URL}}"
-							],
-							"path": [
-								"r1",
-								"{{X_ROAD_ENV}}",
-								"{{X_ROAD_AUTH_SERVICE}}",
-								"v2",
-								"token"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "2.2 Search all final certificates for specific employer org",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Status code is 200\", function () {",
-									"    pm.response.to.have.status(200);",
-									"});",
-									"",
-									"pm.test(\"Total field is greater than 0\", function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData.total).to.be.greaterThan(0);",
-									"});",
-									"",
-									"// Extract resource ID from first entry and save to collection variable",
-									"var jsonData = pm.response.json();",
-									"if (jsonData.entry && jsonData.entry.length > 0 && jsonData.entry[0].resource && jsonData.entry[0].resource.id) {",
-									"    pm.collectionVariables.set(\"OCCUP_CERT_ID\", jsonData.entry[0].resource.id);",
-									"}"
-								],
-								"type": "text/javascript",
-								"packages": {},
-								"requests": {}
-							}
-						},
-						{
-							"listen": "prerequest",
-							"script": {
-								"exec": [
-									""
-								],
-								"type": "text/javascript",
-								"packages": {},
-								"requests": {}
-							}
-						}
-					],
-					"request": {
-						"auth": {
-							"type": "noauth"
-						},
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{org_legal_rep_token}}",
-								"type": "text"
-							},
-							{
-								"key": "x-road-client",
-								"value": "{{X_ROAD_ENV}}/{{X_ROAD_CLIENT}}",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{X_ROAD_SERVER_URL}}/r1/{{X_ROAD_ENV}}/{{X_ROAD_HCERT_SERVICE}}/Composition?category=occupational&status=final,cancelled&section-code-text=employer${{EMPLOYER_CODE}}",
-							"host": [
-								"{{X_ROAD_SERVER_URL}}"
-							],
-							"path": [
-								"r1",
-								"{{X_ROAD_ENV}}",
-								"{{X_ROAD_HCERT_SERVICE}}",
-								"Composition"
-							],
-							"query": [
-								{
-									"key": "category",
-									"value": "occupational"
-								},
-								{
-									"key": "status",
-									"value": "final,cancelled"
-								},
-								{
-									"key": "section-code-text",
-									"value": "employer${{EMPLOYER_CODE}}"
-								}
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "2.3 Load single certificate for specific employer org",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Status code is 200\", function () {",
-									"    pm.response.to.have.status(200);",
-									"});"
-								],
-								"type": "text/javascript",
-								"packages": {},
-								"requests": {}
-							}
-						},
-						{
-							"listen": "prerequest",
-							"script": {
-								"exec": [
-									""
-								],
-								"type": "text/javascript",
-								"packages": {},
-								"requests": {}
-							}
-						}
-					],
-					"request": {
-						"auth": {
-							"type": "noauth"
-						},
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{org_legal_rep_token}}",
-								"type": "text"
-							},
-							{
-								"key": "x-road-client",
-								"value": "{{X_ROAD_ENV}}/{{X_ROAD_CLIENT}}",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{X_ROAD_SERVER_URL}}/r1/{{X_ROAD_ENV}}/{{X_ROAD_HCERT_SERVICE}}/Composition/{{OCCUP_CERT_ID}}",
-							"host": [
-								"{{X_ROAD_SERVER_URL}}"
-							],
-							"path": [
-								"r1",
-								"{{X_ROAD_ENV}}",
-								"{{X_ROAD_HCERT_SERVICE}}",
-								"Composition",
-								"{{OCCUP_CERT_ID}}"
-							]
-						}
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "3. Occupational certs queried by government official",
-			"item": [
-				{
-					"name": "3.1 Get token as government official",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.collectionVariables.set(\"gov_off_token\", pm.response.json().accessToken);",
-									""
-								],
-								"type": "text/javascript",
-								"packages": {},
-								"requests": {}
-							}
-						},
-						{
-							"listen": "prerequest",
-							"script": {
-								"exec": [
-									""
-								],
-								"type": "text/javascript",
-								"packages": {},
-								"requests": {}
-							}
-						}
-					],
-					"request": {
-						"auth": {
-							"type": "noauth"
-						},
-						"method": "POST",
-						"header": [
-							{
-								"key": "x-road-client",
-								"value": "{{X_ROAD_ENV}}/{{X_ROAD_CLIENT}}",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"user\": {\n    \"personalCode\": \"36201182245\"\n  },\n  \"organization\": \"70009770\", // should match with xroad client organization\n \"representedParty\": \"70001969\", // necessary only for TEHIK internal testing\n  \"role\": \"gov-official\",\n  \"application\": \"teis-app\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{X_ROAD_SERVER_URL}}/r1/{{X_ROAD_ENV}}/{{X_ROAD_AUTH_SERVICE}}/v2/token",
-							"host": [
-								"{{X_ROAD_SERVER_URL}}"
-							],
-							"path": [
-								"r1",
-								"{{X_ROAD_ENV}}",
-								"{{X_ROAD_AUTH_SERVICE}}",
-								"v2",
-								"token"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "3.1 Search all final certificates",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Status code is 200\", function () {",
-									"    pm.response.to.have.status(200);",
-									"});",
-									"",
-									"pm.test(\"Total field is greater than 0\", function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData.total).to.be.greaterThan(0);",
-									"});",
-									"",
-									"// Extract resource ID from first entry and save to collection variable",
-									"var jsonData = pm.response.json();",
-									"if (jsonData.entry && jsonData.entry.length > 0 && jsonData.entry[0].resource && jsonData.entry[0].resource.id) {",
-									"    pm.collectionVariables.set(\"OCCUP_CERT_ID\", jsonData.entry[0].resource.id);",
-									"}"
-								],
-								"type": "text/javascript",
-								"packages": {},
-								"requests": {}
-							}
-						},
-						{
-							"listen": "prerequest",
-							"script": {
-								"exec": [
-									""
-								],
-								"type": "text/javascript",
-								"packages": {},
-								"requests": {}
-							}
-						}
-					],
-					"request": {
-						"auth": {
-							"type": "noauth"
-						},
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{gov_off_token}}",
-								"type": "text"
-							},
-							{
-								"key": "x-road-client",
-								"value": "{{X_ROAD_ENV}}/{{X_ROAD_CLIENT}}",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{X_ROAD_SERVER_URL}}/r1/{{X_ROAD_ENV}}/{{X_ROAD_HCERT_SERVICE}}/Composition?category=occupational&status=final,cancelled",
-							"host": [
-								"{{X_ROAD_SERVER_URL}}"
-							],
-							"path": [
-								"r1",
-								"{{X_ROAD_ENV}}",
-								"{{X_ROAD_HCERT_SERVICE}}",
-								"Composition"
-							],
-							"query": [
-								{
-									"key": "category",
-									"value": "occupational"
-								},
-								{
-									"key": "status",
-									"value": "final,cancelled"
-								}
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "3.2 Load single certificate",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Status code is 200\", function () {",
-									"    pm.response.to.have.status(200);",
-									"});"
-								],
-								"type": "text/javascript",
-								"packages": {},
-								"requests": {}
-							}
-						},
-						{
-							"listen": "prerequest",
-							"script": {
-								"exec": [
-									""
-								],
-								"type": "text/javascript",
-								"packages": {},
-								"requests": {}
-							}
-						}
-					],
-					"request": {
-						"auth": {
-							"type": "noauth"
-						},
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{gov_off_token}}",
-								"type": "text"
-							},
-							{
-								"key": "x-road-client",
-								"value": "{{X_ROAD_ENV}}/{{X_ROAD_CLIENT}}",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{X_ROAD_SERVER_URL}}/r1/{{X_ROAD_ENV}}/{{X_ROAD_HCERT_SERVICE}}/Composition/{{OCCUP_CERT_ID}}",
-							"host": [
-								"{{X_ROAD_SERVER_URL}}"
-							],
-							"path": [
-								"r1",
-								"{{X_ROAD_ENV}}",
-								"{{X_ROAD_HCERT_SERVICE}}",
-								"Composition",
-								"{{OCCUP_CERT_ID}}"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "2.2 Search all final certificates for specific employer org",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Status code is 200\", function () {",
-									"    pm.response.to.have.status(200);",
-									"});",
-									"",
-									"pm.test(\"Total field is greater than 0\", function () {",
-									"    var jsonData = pm.response.json();",
-									"    pm.expect(jsonData.total).to.be.greaterThan(0);",
-									"});"
-								],
-								"type": "text/javascript",
-								"packages": {},
-								"requests": {}
-							}
-						},
-						{
-							"listen": "prerequest",
-							"script": {
-								"exec": [
-									""
-								],
-								"type": "text/javascript",
-								"packages": {},
-								"requests": {}
-							}
-						}
-					],
-					"request": {
-						"auth": {
-							"type": "noauth"
-						},
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{gov_off_token}}",
-								"type": "text"
-							},
-							{
-								"key": "x-road-client",
-								"value": "{{X_ROAD_ENV}}/{{X_ROAD_CLIENT}}",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{X_ROAD_SERVER_URL}}/r1/{{X_ROAD_ENV}}/{{X_ROAD_HCERT_SERVICE}}/Composition?category=occupational&status=final,cancelled&section-code-text=employer${{EMPLOYER_CODE}}",
-							"host": [
-								"{{X_ROAD_SERVER_URL}}"
-							],
-							"path": [
-								"r1",
-								"{{X_ROAD_ENV}}",
-								"{{X_ROAD_HCERT_SERVICE}}",
-								"Composition"
-							],
-							"query": [
-								{
-									"key": "category",
-									"value": "occupational"
-								},
-								{
-									"key": "status",
-									"value": "final,cancelled"
-								},
-								{
-									"key": "section-code-text",
-									"value": "employer${{EMPLOYER_CODE}}"
-								}
-							]
-						}
-					},
-					"response": []
-				}
-			]
-		},
-		{
-			"name": "4. Driver certificate operations by doctor",
-			"item": [
-				{
-					"name": "4.1 Doctor token",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.collectionVariables.set(\"doctor_token\", pm.response.json().accessToken);",
-									""
-								],
-								"type": "text/javascript",
-								"packages": {},
-								"requests": {}
-							}
-						},
-						{
-							"listen": "prerequest",
-							"script": {
-								"exec": [
-									""
-								],
-								"type": "text/javascript",
-								"packages": {},
-								"requests": {}
-							}
-						}
-					],
-					"request": {
-						"auth": {
-							"type": "noauth"
-						},
-						"method": "POST",
-						"header": [
-							{
-								"key": "x-road-client",
-								"value": "{{X_ROAD_ENV}}/{{X_ROAD_CLIENT}}",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n  \"user\": {\n    \"personalCode\": \"45007090928\"\n  },\n  \"organization\": \"70009770\",\n  \"role\": \"doctor\",\n  \"application\": \"test-app\"\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{X_ROAD_SERVER_URL}}/r1/{{X_ROAD_ENV}}/{{X_ROAD_AUTH_SERVICE}}/v2/token",
-							"host": [
-								"{{X_ROAD_SERVER_URL}}"
-							],
-							"path": [
-								"r1",
-								"{{X_ROAD_ENV}}",
-								"{{X_ROAD_AUTH_SERVICE}}",
-								"v2",
-								"token"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "4.2 Search Patient by identifier",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"pm.test(\"Should return 200\", () => {",
-									"    pm.response.to.have.status(200);",
-									"});",
-									"",
-									"const responseData = pm.response.json();",
-									"const patientReference = responseData.entry[0].resource.id;",
-									"pm.collectionVariables.set(\"PATIENT_ID2\", patientReference);"
-								],
-								"type": "text/javascript",
-								"packages": {},
-								"requests": {}
-							}
-						},
-						{
-							"listen": "prerequest",
-							"script": {
-								"exec": [
-									""
-								],
-								"type": "text/javascript",
-								"packages": {},
-								"requests": {}
-							}
-						}
-					],
-					"request": {
-						"auth": {
-							"type": "noauth"
-						},
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{doctor_token}}",
-								"type": "text"
-							},
-							{
-								"key": "x-road-client",
-								"value": "{{X_ROAD_ENV}}/{{X_ROAD_CLIENT}}",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{X_ROAD_SERVER_URL}}/r1/{{X_ROAD_ENV}}/{{X_ROAD_MPI_SERVICE}}/Patient?identifier={{EST_PATIENT_CODE2}}",
-							"host": [
-								"{{X_ROAD_SERVER_URL}}"
-							],
-							"path": [
-								"r1",
-								"{{X_ROAD_ENV}}",
-								"{{X_ROAD_MPI_SERVICE}}",
-								"Patient"
-							],
-							"query": [
-								{
-									"key": "identifier",
-									"value": "{{EST_PATIENT_CODE2}}"
-								}
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "4.3 Create preliminary certificate",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"       const location = pm.response.headers.get(\"Location\");",
-									"        if (!location) {",
-									"          console.error(\"Location header is missing from the response.\");",
-									"          return;",
-									"        }",
-									"        pm.expect(location).to.exist;",
-									"        const urlParts = location.split(\"/\");",
-									"",
-									"        const certificateId = urlParts[urlParts.length - 3];",
-									"        pm.collectionVariables.set(\"CERTIFICATE_ID\", certificateId);",
-									"    ",
-									"",
-									"        const cerificateVersion = urlParts[urlParts.length - 1];",
-									"        pm.collectionVariables.set(\"CERTIFICATE_VERSION\", cerificateVersion);"
-								],
-								"type": "text/javascript",
-								"packages": {},
-								"requests": {}
-							}
-						},
-						{
-							"listen": "prerequest",
-							"script": {
-								"exec": [
-									"const uuid = pm.variables.replaceIn('{{$randomUUID}}');",
-									"pm.collectionVariables.set(\"DOC_NUMBER\", uuid);"
-								],
-								"type": "text/javascript",
-								"packages": {},
-								"requests": {}
-							}
-						}
-					],
-					"request": {
-						"auth": {
-							"type": "noauth"
-						},
-						"method": "POST",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{doctor_token}}",
-								"type": "text"
-							},
-							{
-								"key": "Prefer",
-								"value": "return=representation",
-								"type": "text"
-							},
-							{
-								"key": "x-road-client",
-								"value": "{{X_ROAD_ENV}}/{{X_ROAD_CLIENT}}",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"resourceType\": \"Composition\",\n    \"meta\": {\n        \"profile\": [\n            \"https://fhir.ee/hcert/StructureDefinition/ee-health-certificate-driver\"\n        ]\n    },\n    \"contained\": [\n        {\n            \"resourceType\": \"PractitionerRole\",\n            \"id\": \"pract-role\",\n            \"practitioner\": {\n                \"reference\": \"Practitioner/45007090928\"\n            },\n            \"organization\": {\n                \"reference\": \"Organization/70009770\"\n            }\n        }\n    ],\n    \"identifier\": [\n        {\n            \"system\": \"https://fhir.ee/hcert/health-certificate-number\",\n            \"value\": \"HCERT-{{DOC_NUMBER}}\"\n        }\n    ],\n    \"status\": \"preliminary\",\n    \"type\": {\n        \"coding\": [\n            {\n                \"system\": \"http://snomed.info/sct\",\n                \"code\": \"772786005\",\n                \"display\": \"Medical certificate (record artifact)\"\n            }\n        ]\n    },\n    \"category\": [\n        {\n            \"coding\": [\n                {\n                    \"system\": \"https://fhir.ee/CodeSystem/labivaatuse-tyyp\",\n                    \"code\": \"driver-group-I\"\n                }\n            ]\n        }\n    ],\n    \"subject\": [\n        {\n            \"reference\": \"Patient/{{PATIENT_ID2}}\"\n        }\n    ],\n    \"date\": \"2025-11-26T00:00:00.000+00:00\",\n    \"author\": [\n        {\n            \"reference\": \"#pract-role\"\n        }\n    ],\n    \"title\": \"MSJ tervisekontroll\",\n    \"event\": [\n        {\n            \"period\": {\n                \"start\": \"2025-11-26T00:00:00.000+00:00\",\n                \"end\": \"2035-11-26T00:00:00.000+00:00\"\n            }\n        }\n    ],\n    \"section\": [\n        {\n            \"code\": {\n                \"coding\": [\n                    {\n                        \"system\": \"https://fhir.ee/CodeSystem/tervisetoendi-sektsioon\",\n                        \"code\": \"health-declaration\"\n                    }\n                ]\n            },\n            \"entry\": [\n                {\n                    \"identifier\": {\n                        \"system\": \"https://fhir.ee/hcert/health-declaration-external-document-number\",\n                        \"value\": \"HD-12345\"\n                    }\n                }\n            ]\n        }\n    ]\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{X_ROAD_SERVER_URL}}/r1/{{X_ROAD_ENV}}/{{X_ROAD_HCERT_SERVICE}}/Composition",
-							"host": [
-								"{{X_ROAD_SERVER_URL}}"
-							],
-							"path": [
-								"r1",
-								"{{X_ROAD_ENV}}",
-								"{{X_ROAD_HCERT_SERVICE}}",
-								"Composition"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "4.4 Load preliminary certificate",
-					"request": {
-						"auth": {
-							"type": "noauth"
-						},
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{doctor_token}}",
-								"type": "text"
-							},
-							{
-								"key": "x-road-client",
-								"value": "{{X_ROAD_ENV}}/{{X_ROAD_CLIENT}}",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{X_ROAD_SERVER_URL}}/r1/{{X_ROAD_ENV}}/{{X_ROAD_HCERT_SERVICE}}/Composition/{{CERTIFICATE_ID}}",
-							"host": [
-								"{{X_ROAD_SERVER_URL}}"
-							],
-							"path": [
-								"r1",
-								"{{X_ROAD_ENV}}",
-								"{{X_ROAD_HCERT_SERVICE}}",
-								"Composition",
-								"{{CERTIFICATE_ID}}"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "4.5 Update preliminary certificate",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"       const location = pm.response.headers.get(\"Location\");",
-									"        if (!location) {",
-									"          console.error(\"Location header is missing from the response.\");",
-									"          return;",
-									"        }",
-									"        pm.expect(location).to.exist;",
-									"        const urlParts = location.split(\"/\");",
-									"",
-									"        const certificateId = urlParts[urlParts.length - 3];",
-									"        pm.collectionVariables.set(\"CERTIFICATE_ID\", certificateId);",
-									"    ",
-									"",
-									"        const cerificateVersion = urlParts[urlParts.length - 1];",
-									"        pm.collectionVariables.set(\"CERTIFICATE_VERSION\", cerificateVersion);"
-								],
-								"type": "text/javascript",
-								"packages": {},
-								"requests": {}
-							}
-						},
-						{
-							"listen": "prerequest",
-							"script": {
-								"exec": [
-									""
-								],
-								"type": "text/javascript",
-								"packages": {},
-								"requests": {}
-							}
-						}
-					],
-					"request": {
-						"auth": {
-							"type": "noauth"
-						},
-						"method": "PUT",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{doctor_token}}",
-								"type": "text"
-							},
-							{
-								"key": "Prefer",
-								"value": "return=representation",
-								"type": "text"
-							},
-							{
-								"key": "x-road-client",
-								"value": "{{X_ROAD_ENV}}/{{X_ROAD_CLIENT}}",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"resourceType\": \"Composition\",\n    \"meta\": {\n        \"profile\": [\n            \"https://fhir.ee/hcert/StructureDefinition/ee-health-certificate-driver\"\n        ]\n    },\n    \"contained\": [\n        {\n            \"resourceType\": \"PractitionerRole\",\n            \"id\": \"pract-role\",\n            \"practitioner\": {\n                \"reference\": \"Practitioner/45007090928\"\n            },\n            \"organization\": {\n                \"reference\": \"Organization/70009770\"\n            }\n        }\n    ],\n    \"identifier\": [\n        {\n            \"system\": \"https://fhir.ee/hcert/health-certificate-number\",\n            \"value\": \"HCERT-{{DOC_NUMBER}}\"\n        }\n    ],\n    \"status\": \"preliminary\",\n    \"type\": {\n        \"coding\": [\n            {\n                \"system\": \"http://snomed.info/sct\",\n                \"code\": \"772786005\",\n                \"display\": \"Medical certificate (record artifact)\"\n            }\n        ]\n    },\n    \"category\": [\n        {\n            \"coding\": [\n                {\n                    \"system\": \"https://fhir.ee/CodeSystem/labivaatuse-tyyp\",\n                    \"code\": \"driver-group-I\"\n                }\n            ]\n        }\n    ],\n    \"subject\": [\n        {\n            \"reference\": \"Patient/{{PATIENT_ID2}}\"\n        }\n    ],\n    \"date\": \"2025-11-26T00:00:00.000+00:00\",\n    \"author\": [\n        {\n            \"reference\": \"#pract-role\"\n        }\n    ],\n    \"title\": \"MSJ tervisekontroll\",\n    \"event\": [\n        {\n            \"period\": {\n                \"start\": \"2025-11-26T00:00:00.000+00:00\",\n                \"end\": \"2035-11-26T00:00:00.000+00:00\"\n            }\n        }\n    ],\n    \"section\": [\n        {\n            \"code\": {\n                \"coding\": [\n                    {\n                        \"system\": \"https://fhir.ee/CodeSystem/tervisetoendi-sektsioon\",\n                        \"code\": \"health-declaration\"\n                    }\n                ]\n            },\n            \"entry\": [\n                {\n                    \"identifier\": {\n                        \"system\": \"https://fhir.ee/hcert/health-declaration-external-document-number\",\n                        \"value\": \"HD-12345\"\n                    }\n                }\n            ]\n        }\n    ]\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{X_ROAD_SERVER_URL}}/r1/{{X_ROAD_ENV}}/{{X_ROAD_HCERT_SERVICE}}/Composition/{{CERTIFICATE_ID}}",
-							"host": [
-								"{{X_ROAD_SERVER_URL}}"
-							],
-							"path": [
-								"r1",
-								"{{X_ROAD_ENV}}",
-								"{{X_ROAD_HCERT_SERVICE}}",
-								"Composition",
-								"{{CERTIFICATE_ID}}"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "4.6 Load preliminary certificate whole history",
-					"request": {
-						"auth": {
-							"type": "noauth"
-						},
-						"method": "GET",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{doctor_token}}",
-								"type": "text"
-							},
-							{
-								"key": "x-road-client",
-								"value": "{{X_ROAD_ENV}}/{{X_ROAD_CLIENT}}",
-								"type": "text"
-							}
-						],
-						"url": {
-							"raw": "{{X_ROAD_SERVER_URL}}/r1/{{X_ROAD_ENV}}/{{X_ROAD_HCERT_SERVICE}}/Composition/{{CERTIFICATE_ID}}/_history",
-							"host": [
-								"{{X_ROAD_SERVER_URL}}"
-							],
-							"path": [
-								"r1",
-								"{{X_ROAD_ENV}}",
-								"{{X_ROAD_HCERT_SERVICE}}",
-								"Composition",
-								"{{CERTIFICATE_ID}}",
-								"_history"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "4.7 Make certificate final, add decision",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"       const location = pm.response.headers.get(\"Location\");",
-									"        if (!location) {",
-									"          console.error(\"Location header is missing from the response.\");",
-									"          return;",
-									"        }",
-									"        pm.expect(location).to.exist;",
-									"        const urlParts = location.split(\"/\");",
-									"",
-									"        const certificateId = urlParts[urlParts.length - 3];",
-									"        pm.collectionVariables.set(\"CERTIFICATE_ID\", certificateId);",
-									"    ",
-									"",
-									"        const cerificateVersion = urlParts[urlParts.length - 1];",
-									"        pm.collectionVariables.set(\"CERTIFICATE_VERSION\", cerificateVersion);"
-								],
-								"type": "text/javascript",
-								"packages": {},
-								"requests": {}
-							}
-						},
-						{
-							"listen": "prerequest",
-							"script": {
-								"exec": [
-									""
-								],
-								"type": "text/javascript",
-								"packages": {},
-								"requests": {}
-							}
-						}
-					],
-					"request": {
-						"auth": {
-							"type": "noauth"
-						},
-						"method": "PUT",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{doctor_token}}",
-								"type": "text"
-							},
-							{
-								"key": "Prefer",
-								"value": "return=representation",
-								"type": "text"
-							},
-							{
-								"key": "x-road-client",
-								"value": "{{X_ROAD_ENV}}/{{X_ROAD_CLIENT}}",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"resourceType\": \"Composition\",\n    \"meta\": {\n        \"profile\": [\n            \"https://fhir.ee/hcert/StructureDefinition/ee-health-certificate-driver\"\n        ]\n    },\n    \"contained\": [\n        {\n            \"resourceType\": \"PractitionerRole\",\n            \"id\": \"pract-role\",\n            \"practitioner\": {\n                \"reference\": \"Practitioner/45007090928\"\n            },\n            \"organization\": {\n                \"reference\": \"Organization/70009770\"\n            }\n        },\n        {\n            \"resourceType\": \"Observation\",\n            \"id\": \"decision\",\n            \"meta\": {\n                \"profile\": [\n                    \"https://fhir.ee/hcert/StructureDefinition/ee-health-certificate-decision\"\n                ]\n            },\n            \"status\": \"final\",\n            \"code\": {\n                \"coding\": [\n                    {\n                        \"system\": \"http://snomed.info/sct\",\n                        \"code\": \"419183001\",\n                        \"display\": \"Practitioner decision status\"\n                    }\n                ]\n            },\n            \"valueCodeableConcept\": {\n                \"coding\": [\n                    {\n                        \"system\": \"http://snomed.info/sct\",\n                        \"code\": \"171353001\"\n                    }\n                ]\n            }\n        }\n    ],\n    \"identifier\": [\n        {\n            \"system\": \"https://fhir.ee/hcert/health-certificate-number\",\n            \"value\": \"HCERT-{{DOC_NUMBER}}\"\n        }\n    ],\n    \"status\": \"final\",\n    \"type\": {\n        \"coding\": [\n            {\n                \"system\": \"http://snomed.info/sct\",\n                \"code\": \"772786005\",\n                \"display\": \"Medical certificate (record artifact)\"\n            }\n        ]\n    },\n    \"category\": [\n        {\n            \"coding\": [\n                {\n                    \"system\": \"https://fhir.ee/CodeSystem/labivaatuse-tyyp\",\n                    \"code\": \"driver-group-I\"\n                }\n            ]\n        }\n    ],\n    \"subject\": [\n        {\n            \"reference\": \"Patient/{{PATIENT_ID2}}\"\n        }\n    ],\n    \"date\": \"2025-11-26T00:00:00.000+00:00\",\n    \"author\": [\n        {\n            \"reference\": \"#pract-role\"\n        }\n    ],\n    \"title\": \"MSJ tervisekontroll\",\n    \"event\": [\n        {\n            \"period\": {\n                \"start\": \"2025-11-26T00:00:00.000+00:00\",\n                \"end\": \"2035-11-26T00:00:00.000+00:00\"\n            }\n        }\n    ],\n    \"section\": [\n        {\n            \"code\": {\n                \"coding\": [\n                    {\n                        \"system\": \"https://fhir.ee/CodeSystem/tervisetoendi-sektsioon\",\n                        \"code\": \"health-declaration\"\n                    }\n                ]\n            },\n            \"entry\": [\n                {\n                    \"identifier\": {\n                        \"system\": \"https://fhir.ee/hcert/health-declaration-external-document-number\",\n                        \"value\": \"HD-12345\"\n                    }\n                }\n            ]\n        },\n        {\n            \"code\": {\n                \"coding\": [\n                    {\n                        \"system\": \"https://fhir.ee/CodeSystem/tervisetoendi-sektsioon\",\n                        \"code\": \"decision\"\n                    }\n                ]\n            },\n            \"entry\": [\n                {\n                    \"reference\": \"#decision\"\n                }\n            ]\n        }\n    ]\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{X_ROAD_SERVER_URL}}/r1/{{X_ROAD_ENV}}/{{X_ROAD_HCERT_SERVICE}}/Composition/{{CERTIFICATE_ID}}",
-							"host": [
-								"{{X_ROAD_SERVER_URL}}"
-							],
-							"path": [
-								"r1",
-								"{{X_ROAD_ENV}}",
-								"{{X_ROAD_HCERT_SERVICE}}",
-								"Composition",
-								"{{CERTIFICATE_ID}}"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "4.8 Suspend certificate",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"       const location = pm.response.headers.get(\"Location\");",
-									"        if (!location) {",
-									"          console.error(\"Location header is missing from the response.\");",
-									"          return;",
-									"        }",
-									"        pm.expect(location).to.exist;",
-									"        const urlParts = location.split(\"/\");",
-									"",
-									"        const certificateId = urlParts[urlParts.length - 3];",
-									"        pm.collectionVariables.set(\"CERTIFICATE_ID\", certificateId);",
-									"    ",
-									"",
-									"        const cerificateVersion = urlParts[urlParts.length - 1];",
-									"        pm.collectionVariables.set(\"CERTIFICATE_VERSION\", cerificateVersion);"
-								],
-								"type": "text/javascript",
-								"packages": {},
-								"requests": {}
-							}
-						},
-						{
-							"listen": "prerequest",
-							"script": {
-								"exec": [
-									""
-								],
-								"type": "text/javascript",
-								"packages": {},
-								"requests": {}
-							}
-						}
-					],
-					"request": {
-						"auth": {
-							"type": "noauth"
-						},
-						"method": "POST",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{doctor_token}}",
-								"type": "text"
-							},
-							{
-								"key": "Prefer",
-								"value": "return=representation",
-								"type": "text"
-							},
-							{
-								"key": "x-road-client",
-								"value": "{{X_ROAD_ENV}}/{{X_ROAD_CLIENT}}",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"resourceType\": \"Parameters\",\n    \"parameter\": [\n        {\n            \"name\": \"reason\",\n            \"valueString\": \"peatamise põhjus XXX\"\n        }\n    ]\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{X_ROAD_SERVER_URL}}/r1/{{X_ROAD_ENV}}/{{X_ROAD_HCERT_SERVICE}}/Composition/{{CERTIFICATE_ID}}/$suspend",
-							"host": [
-								"{{X_ROAD_SERVER_URL}}"
-							],
-							"path": [
-								"r1",
-								"{{X_ROAD_ENV}}",
-								"{{X_ROAD_HCERT_SERVICE}}",
-								"Composition",
-								"{{CERTIFICATE_ID}}",
-								"$suspend"
-							]
-						}
-					},
-					"response": []
-				},
-				{
-					"name": "4.9 Cancel certificate",
-					"event": [
-						{
-							"listen": "test",
-							"script": {
-								"exec": [
-									"       const location = pm.response.headers.get(\"Location\");",
-									"        if (!location) {",
-									"          console.error(\"Location header is missing from the response.\");",
-									"          return;",
-									"        }",
-									"        pm.expect(location).to.exist;",
-									"        const urlParts = location.split(\"/\");",
-									"",
-									"        const certificateId = urlParts[urlParts.length - 3];",
-									"        pm.collectionVariables.set(\"CERTIFICATE_ID\", certificateId);",
-									"    ",
-									"",
-									"        const cerificateVersion = urlParts[urlParts.length - 1];",
-									"        pm.collectionVariables.set(\"CERTIFICATE_VERSION\", cerificateVersion);"
-								],
-								"type": "text/javascript",
-								"packages": {},
-								"requests": {}
-							}
-						},
-						{
-							"listen": "prerequest",
-							"script": {
-								"exec": [
-									""
-								],
-								"type": "text/javascript",
-								"packages": {},
-								"requests": {}
-							}
-						}
-					],
-					"request": {
-						"auth": {
-							"type": "noauth"
-						},
-						"method": "POST",
-						"header": [
-							{
-								"key": "Authorization",
-								"value": "Bearer {{doctor_token}}",
-								"type": "text"
-							},
-							{
-								"key": "Prefer",
-								"value": "return=representation",
-								"type": "text"
-							},
-							{
-								"key": "x-road-client",
-								"value": "{{X_ROAD_ENV}}/{{X_ROAD_CLIENT}}",
-								"type": "text"
-							}
-						],
-						"body": {
-							"mode": "raw",
-							"raw": "{\n    \"resourceType\": \"Parameters\",\n    \"parameter\": [\n        {\n            \"name\": \"reason\",\n            \"valueString\": \"tühistamise põhjus XXX\"\n        }\n    ]\n}",
-							"options": {
-								"raw": {
-									"language": "json"
-								}
-							}
-						},
-						"url": {
-							"raw": "{{X_ROAD_SERVER_URL}}/r1/{{X_ROAD_ENV}}/{{X_ROAD_HCERT_SERVICE}}/Composition/{{CERTIFICATE_ID}}/$cancel",
-							"host": [
-								"{{X_ROAD_SERVER_URL}}"
-							],
-							"path": [
-								"r1",
-								"{{X_ROAD_ENV}}",
-								"{{X_ROAD_HCERT_SERVICE}}",
-								"Composition",
-								"{{CERTIFICATE_ID}}",
-								"$cancel"
-							]
-						}
-					},
-					"response": []
-				}
-			]
-		}
-	],
-	"auth": {
-		"type": "bearer",
-		"bearer": [
-			{
-				"key": "token",
-				"value": "{{token}}",
-				"type": "string"
-			}
-		]
-	},
-	"event": [
-		{
-			"listen": "prerequest",
-			"script": {
-				"type": "text/javascript",
-				"requests": {},
-				"exec": [
-					""
-				]
-			}
-		},
-		{
-			"listen": "test",
-			"script": {
-				"type": "text/javascript",
-				"packages": {},
-				"requests": {},
-				"exec": [
-					""
-				]
-			}
-		}
-	],
-	"variable": [
-		{
-			"key": "X_ROAD_SERVER_URL",
-			"value": "https://10.0.13.90"
-		},
-		{
-			"key": "X_ROAD_ENV",
-			"value": "ee-dev"
-		},
-		{
-			"key": "X_ROAD_CLIENT",
-			"value": "GOV/70009770/tto-tis-klient"
-		},
-		{
-			"key": "X_ROAD_AUTH_SERVICE",
-			"value": "GOV/70009770/tis/auth"
-		},
-		{
-			"key": "X_ROAD_HCERT_SERVICE",
-			"value": "GOV/70009770/tis/fhir"
-		},
-		{
-			"key": "X_ROAD_MPI_SERVICE",
-			"value": "GOV/70009770/tis/fhir"
-		},
-		{
-			"key": "HCERT_URL",
-			"value": "https://tis.dev.tehik.ee/hcert"
-		},
-		{
-			"key": "EMPLOYER_CODE",
-			"value": "16978044"
-		},
-		{
-			"key": "PATIENT_ID",
-			"value": "517685"
-		},
-		{
-			"key": "EST_PATIENT_CODE",
-			"value": "37207279996"
-		},
-		{
-			"key": "EST_PATIENT_CODE2",
-			"value": "36808088873"
-		},
-		{
-			"key": "doctor_token",
-			"value": ""
-		},
-		{
-			"key": "CERTIFICATE_ID",
-			"value": ""
-		},
-		{
-			"key": "CERTIFICATE_VERSION",
-			"value": ""
-		},
-		{
-			"key": "org_legal_rep_token",
-			"value": ""
-		},
-		{
-			"key": "OCCUP_CERT_ID",
-			"value": ""
-		},
-		{
-			"key": "gov_off_token",
-			"value": ""
-		},
-		{
-			"key": "PATIENT_ID2",
-			"value": ""
-		},
-		{
-			"key": "DOC_NUMBER",
-			"value": ""
-		}
-	]
+  "info": {
+    "_postman_id": "f84ae985-0dba-4467-ba3f-7dfec3d386ce",
+    "name": "HCERT X-Road",
+    "description": "# HCERT FHIR API demo collection\n\nThis collection provides sample requests for HCERT service over X-road. Additionally MPI requests provided for querying patient, AUTH for authorization.\n\nCurrently it covers use-cases for TEIS (occupational certificates) and Healthcare providers (driver certificates).\n\n## Requirements\n\n1. Ask TEHIK IT support ([itabi@tehik.ee](https://mailto:itabi@tehik.ee)) for x-road access rights to the following services:\n    \n    1. **GOV/70009770/tis/fhir** - FHIR intermediary server (HCERT and MPI queries)\n        \n    2. **GOV/70009770/tis/auth** - AUTH ehk autoriseerimise teenus (token-te pärimine)\n        \n2. Adjust collection variables (root folder -> Variables):\n    \n    1. **X_ROAD_SERVER_URL** - your security server url\n        \n    2. **X_ROAD_CLIENT** - your x-road client\n        \n3. Healthcare providers (TTO) should use their own doctor-organization combination that exist in MEDRE for AUTH queries (token requests with role **doctor**). TEHIK IT support should be able to help with creating new entries in dev/test MEDRE.\n    \n\n## Structure and usage\n\nUse case examples are divided into folders, title defines what it does and by which role operations are performed. First query inside each folder is token request for specific role. Token is saved to collection variables and lasts 5 minutes. Any request made with invalid (timed out) token receives 401 error.\n\n### TEIS specific folders\n\nThere are 2 TEIS specific folders (**2\\. Occupational certs queried by employer** and **3\\. Occupational certs queried by government official**) to demonstrate usage of gov-official and org-legal-representative role and HCERT queries for querying occupational certificates by official (i.e auditor) and employer representative. These roles are allowed only for TEIS x-road client (in case any errors, please contact IT support).\n\nIn order to receive any data, some occupational certificates should be created for Emloyer organization code defined via **EMPLOYER_CODE** collection variable. Ask TEHIK to create some examples for specific organization.\n\n### TRAM specific folder\n\nThere is TRAM specific folder (**5\\. Driver certs queried by government official**) to demonstrate usage of gov-official role and HCERT queries for querying driver certificates by official (i.e auditor). This role is allowed only for TRAM x-road client (in case any errors, please contact IT support).\n\n## Important notes\n\nHealthcare providers should use different patients in their test, change **EST_PATIENT_CODE2** collection variable.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "2239897"
+  },
+  "item": [
+    {
+      "name": "1. Create occupational certificate by doctor",
+      "item": [
+        {
+          "name": "1.1 Doctor token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.collectionVariables.set(\"doctor_token\", pm.response.json().accessToken);",
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-road-client",
+                "value": "{{X_ROAD_ENV}}/{{X_ROAD_CLIENT}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user\": {\n    \"personalCode\": \"45007090928\"\n  },\n  \"organization\": \"70009770\",\n  \"role\": \"doctor\",\n  \"application\": \"test-app\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{X_ROAD_SERVER_URL}}/r1/{{X_ROAD_ENV}}/{{X_ROAD_AUTH_SERVICE}}/v2/token",
+              "host": [
+                "{{X_ROAD_SERVER_URL}}"
+              ],
+              "path": [
+                "r1",
+                "{{X_ROAD_ENV}}",
+                "{{X_ROAD_AUTH_SERVICE}}",
+                "v2",
+                "token"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.2 Search Patient by identifier",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Should return 200\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Total should be 1\", () => {",
+                  "    const jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.total).to.eql(1);",
+                  "});",
+                  "",
+                  "",
+                  "const responseData = pm.response.json();",
+                  "const patientReference = responseData.entry[0].resource.id;",
+                  "pm.collectionVariables.set(\"PATIENT_ID\", patientReference);"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{doctor_token}}",
+                "type": "text"
+              },
+              {
+                "key": "x-road-client",
+                "value": "{{X_ROAD_ENV}}/{{X_ROAD_CLIENT}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{X_ROAD_SERVER_URL}}/r1/{{X_ROAD_ENV}}/{{X_ROAD_MPI_SERVICE}}/Patient?identifier={{EST_PATIENT_CODE}}",
+              "host": [
+                "{{X_ROAD_SERVER_URL}}"
+              ],
+              "path": [
+                "r1",
+                "{{X_ROAD_ENV}}",
+                "{{X_ROAD_MPI_SERVICE}}",
+                "Patient"
+              ],
+              "query": [
+                {
+                  "key": "identifier",
+                  "value": "{{EST_PATIENT_CODE}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "1.3 Create final certificate",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const uuid = pm.variables.replaceIn('{{$randomUUID}}');",
+                  "pm.collectionVariables.set(\"DOC_NUMBER\", uuid);"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{doctor_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Prefer",
+                "value": "return=representation",
+                "type": "text"
+              },
+              {
+                "key": "x-road-client",
+                "value": "{{X_ROAD_ENV}}/{{X_ROAD_CLIENT}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"resourceType\": \"Composition\",\n    \"meta\": {\n        \"profile\": [\n            \"https://fhir.ee/hcert/StructureDefinition/ee-health-certificate-occupational\"\n        ]\n    },\n    \"contained\": [\n        {\n            \"resourceType\": \"PractitionerRole\",\n            \"id\": \"pract-role\",\n            \"practitioner\": {\n                \"reference\": \"Practitioner/45007090928\"\n            },\n            \"organization\": {\n                \"reference\": \"Organization/70009770\"\n            }\n        },\n        {\n            \"resourceType\": \"Observation\",\n            \"id\": \"employment\",\n            \"meta\": {\n                \"profile\": [\n                    \"https://fhir.ee/hcert/StructureDefinition/ee-health-certificate-occupational-employment\"\n                ]\n            },\n            \"status\": \"final\",\n            \"code\": {\n                \"coding\": [\n                    {\n                        \"system\": \"http://snomed.info/sct\",\n                        \"code\": \"184104002\",\n                        \"display\": \"Patient occupation\"\n                    }\n                ]\n            },\n            \"performer\": [\n                {\n                    \"identifier\": {\n                        \"system\": \"https://fhir.ee/sid/org/est/br\",\n                        \"value\": \"16978044\"\n                    },\n                    \"display\": \"KORTERIÜHISTU\"\n                }\n            ],\n            \"component\": [\n                {\n                    \"code\": {\n                        \"coding\": [\n                            {\n                                \"system\": \"http://snomed.info/sct\",\n                                \"code\": \"160922003\",\n                                \"display\": \"Job details\"\n                            }\n                        ]\n                    },\n                    \"valueCodeableConcept\": {\n                        \"coding\": [\n                            {\n                                \"system\": \"https://fhir.ee/CodeSystem/ametite-klassifikaator\",\n                                \"code\": \"22220101\"\n                            }\n                        ]\n                    }\n                },\n                {\n                    \"code\": {\n                        \"coding\": [\n                            {\n                                \"system\": \"http://snomed.info/sct\",\n                                \"code\": \"224374003\",\n                                \"display\": \"Regularity of work\"\n                            }\n                        ]\n                    },\n                    \"valueQuantity\": {\n                        \"value\": 0.75,\n                        \"system\": \"http://unitsofmeasure.org\",\n                        \"code\": \"1\"\n                    }\n                }\n            ]\n        },\n        {\n            \"resourceType\": \"Observation\",\n            \"id\": \"400\",\n            \"meta\": {\n                \"profile\": [\n                    \"https://fhir.ee/hcert/StructureDefinition/ee-health-certificate-decision\"\n                ]\n            },\n            \"status\": \"final\",\n            \"code\": {\n                \"coding\": [\n                    {\n                        \"system\": \"http://snomed.info/sct\",\n                        \"code\": \"419183001\",\n                        \"display\": \"Practitioner decision status\"\n                    }\n                ]\n            },\n            \"valueCodeableConcept\": {\n                \"coding\": [\n                    {\n                        \"system\": \"http://snomed.info/sct\",\n                        \"code\": \"160910001\"\n                    }\n                ]\n            }\n        },\n        {\n            \"resourceType\": \"Observation\",\n            \"id\": \"med-restrictions\",\n            \"meta\": {\n                \"profile\": [\n                    \"https://fhir.ee/hcert/StructureDefinition/ee-health-certificate-medical-restriction\"\n                ]\n            },\n            \"status\": \"final\",\n            \"code\": {\n                \"coding\": [\n                    {\n                        \"system\": \"http://snomed.info/sct\",\n                        \"code\": \"146861000181105\",\n                        \"display\": \"Restriction\"\n                    }\n                ]\n            },\n            \"component\": [\n                {\n                    \"code\": {\n                        \"coding\": [\n                            {\n                                \"system\": \"https://fhir.ee/CodeSystem/tervisetoendi-piirangud\",\n                                \"code\": \"750\"\n                            }\n                        ]\n                    },\n                    \"valueCodeableConcept\": {\n                        \"coding\": [\n                            {\n                                \"system\": \"https://fhir.ee/CodeSystem/toolaadi-ja-tookeskkonnaga-seotud-ohutegurid\",\n                                \"code\": \"114\",\n                                \"display\": \"Kantserogeenid\"\n                            }\n                        ]\n                    }\n                }\n            ],\n            \"note\": [\n                {\n                    \"text\": \"some text 1\"\n                }\n            ]\n        },\n        {\n            \"resourceType\": \"Observation\",\n            \"id\": \"med-restrictions-2\",\n            \"meta\": {\n                \"profile\": [\n                    \"https://fhir.ee/hcert/StructureDefinition/ee-health-certificate-medical-restriction\"\n                ]\n            },\n            \"status\": \"final\",\n            \"code\": {\n                \"coding\": [\n                    {\n                        \"system\": \"http://snomed.info/sct\",\n                        \"code\": \"146861000181105\",\n                        \"display\": \"Restriction\"\n                    }\n                ]\n            },\n            \"component\": [\n                {\n                    \"code\": {\n                        \"coding\": [\n                            {\n                                \"system\": \"https://fhir.ee/CodeSystem/tervisetoendi-piirangud\",\n                                \"code\": \"586\"\n                            }\n                        ]\n                    },\n                    \"valueQuantity\": {\n                        \"value\": 10,\n                        \"system\": \"http://unitsofmeasure.org\",\n                        \"code\": \"kg\"\n                    }\n                }\n            ],\n            \"note\": [\n                {\n                    \"text\": \"some text 2\"\n                }\n            ]\n        },\n        {\n            \"resourceType\": \"Observation\",\n            \"id\": \"risk-factors\",\n            \"meta\": {\n                \"profile\": [\n                    \"https://fhir.ee/hcert/StructureDefinition/ee-health-certificate-work-related-risk-factor\"\n                ]\n            },\n            \"status\": \"final\",\n            \"code\": {\n                \"coding\": [\n                    {\n                        \"system\": \"http://snomed.info/sct\",\n                        \"code\": \"80943009\",\n                        \"display\": \"Risk factor\"\n                    }\n                ]\n            },\n            \"valueCodeableConcept\": {\n                \"coding\": [\n                    {\n                        \"system\": \"https://fhir.ee/CodeSystem/toolaadi-ja-tookeskkonnaga-seotud-ohutegurid\",\n                        \"code\": \"558\"\n                    }\n                ]\n            }\n        },\n        {\n            \"resourceType\": \"Observation\",\n            \"id\": \"add-conditions\",\n            \"meta\": {\n                \"profile\": [\n                    \"https://fhir.ee/hcert/StructureDefinition/ee-health-certificate-work-additional-condition\"\n                ]\n            },\n            \"status\": \"final\",\n            \"code\": {\n                \"coding\": [\n                    {\n                        \"system\": \"http://snomed.info/sct\",\n                        \"code\": \"225891002\",\n                        \"display\": \"Fit for work with certain limitations\"\n                    }\n                ]\n            },\n            \"valueCodeableConcept\": {\n                \"coding\": [\n                    {\n                        \"system\": \"https://fhir.ee/CodeSystem/tootamiseks-vajalikud-lisatingimused\",\n                        \"code\": \"work-environment\"\n                    }\n                ]\n            }\n        },\n        {\n            \"resourceType\": \"Observation\",\n            \"id\": \"add-conditions-2\",\n            \"meta\": {\n                \"profile\": [\n                    \"https://fhir.ee/hcert/StructureDefinition/ee-health-certificate-work-additional-condition\"\n                ]\n            },\n            \"status\": \"final\",\n            \"code\": {\n                \"coding\": [\n                    {\n                        \"system\": \"http://snomed.info/sct\",\n                        \"code\": \"225891002\",\n                        \"display\": \"Fit for work with certain limitations\"\n                    }\n                ]\n            },\n            \"valueCodeableConcept\": {\n                \"coding\": [\n                    {\n                        \"system\": \"https://fhir.ee/CodeSystem/tootamiseks-vajalikud-lisatingimused\",\n                        \"code\": \"personal-protective-equipment\"\n                    }\n                ]\n            }\n        }\n    ],\n    \"identifier\": [\n        {\n            \"system\": \"https://fhir.ee/hcert/health-certificate-number\",\n            \"value\": \"HCERT-{{DOC_NUMBER}}\"\n        }\n    ], \n    \"status\": \"final\",\n    \"type\": {\n        \"coding\": [\n            {\n                \"system\": \"http://snomed.info/sct\",\n                \"code\": \"772786005\",\n                \"display\": \"Medical certificate (record artifact)\"\n            }\n        ]\n    },\n    \"category\": [\n        {\n            \"coding\": [\n                {\n                    \"system\": \"https://fhir.ee/CodeSystem/labivaatuse-tyyp\",\n                    \"code\": \"occupational\"\n                }\n            ]\n        }\n    ],\n    \"subject\": [\n        {\n            \"reference\": \"Patient/{{PATIENT_ID}}\"\n        }\n    ],\n    \"date\": \"2025-11-26T00:00:00.000+00:00\",\n    \"author\": [\n        {\n            \"reference\": \"#pract-role\"\n        }\n    ],\n    \"title\": \"Töötervishoiu tervisekontrolli otsus xxxx\",\n    \"event\": [\n        {\n            \"period\": {\n                \"start\": \"2025-11-26T00:00:00.000+00:00\",\n                \"end\": \"2028-11-26T00:00:00.000+00:00\"\n            }\n        }\n    ],\n    \"section\": [\n        {\n            \"code\": {\n                \"coding\": [\n                    {\n                        \"system\": \"https://fhir.ee/CodeSystem/tervisetoendi-sektsioon\",\n                        \"code\": \"health-declaration\"\n                    }\n                ]\n            },\n            \"entry\": [\n                {\n                    \"identifier\": {\n                        \"system\": \"https://fhir.ee/hcert/health-declaration-external-document-number\",\n                        \"value\": \"doc-12345\"\n                    }\n                }\n            ]\n        },\n        {\n            \"code\": {\n                \"coding\": [\n                    {\n                        \"system\": \"https://fhir.ee/CodeSystem/tervisetoendi-sektsioon\",\n                        \"code\": \"employer\"\n                    }\n                ]\n            },\n            \"text\": {\n                \"status\": \"additional\",\n                \"div\": \"<div xmlns=\\\"http://www.w3.org/1999/xhtml\\\">16978044</div>\"\n            },\n            \"entry\": [\n                {\n                    \"reference\": \"#employment\"\n                }\n            ]\n        },\n        {\n            \"code\": {\n                \"coding\": [\n                    {\n                        \"system\": \"https://fhir.ee/CodeSystem/tervisetoendi-sektsioon\",\n                        \"code\": \"decision\"\n                    }\n                ]\n            },\n            \"entry\": [\n                {\n                    \"reference\": \"#400\"\n                }\n            ]\n        },\n        {\n            \"code\": {\n                \"coding\": [\n                    {\n                        \"system\": \"https://fhir.ee/CodeSystem/tervisetoendi-sektsioon\",\n                        \"code\": \"medical-restrictions\"\n                    }\n                ]\n            },\n            \"entry\": [\n                {\n                    \"reference\": \"#med-restrictions\"\n                },\n                {\n                    \"reference\": \"#med-restrictions-2\"\n                }\n            ]\n        },\n        {\n            \"code\": {\n                \"coding\": [\n                    {\n                        \"system\": \"https://fhir.ee/CodeSystem/tervisetoendi-sektsioon\",\n                        \"code\": \"risk-factors\"\n                    }\n                ]\n            },\n            \"entry\": [\n                {\n                    \"reference\": \"#risk-factors\"\n                }\n            ]\n        },\n        {\n            \"code\": {\n                \"coding\": [\n                    {\n                        \"system\": \"https://fhir.ee/CodeSystem/tervisetoendi-sektsioon\",\n                        \"code\": \"work-additional-restrictions\"\n                    }\n                ]\n            },\n            \"entry\": [\n                {\n                    \"reference\": \"#add-conditions\"\n                },\n                {\n                    \"reference\": \"#add-conditions-2\"\n                }\n            ],\n            \"text\": {\n                \"status\": \"additional\",\n                \"div\": \"<div xmlns=\\\"http://www.w3.org/1999/xhtml\\\">Tekst mis kirjeldab lisatingumusi</div>\"\n            }\n        },\n        {\n            \"code\": {\n                \"coding\": [\n                    {\n                        \"system\": \"https://fhir.ee/CodeSystem/tervisetoendi-sektsioon\",\n                        \"code\": \"shortened-reason\"\n                    }\n                ]\n            },\n            \"text\": {\n                \"status\": \"additional\",\n                \"div\": \"<div xmlns=\\\"http://www.w3.org/1999/xhtml\\\">shortened p6hjus</div>\"\n            }\n        },\n        {\n            \"code\": {\n                \"coding\": [\n                    {\n                        \"system\": \"https://fhir.ee/CodeSystem/tervisetoendi-sektsioon\",\n                        \"code\": \"reject-reason\"\n                    }\n                ]\n            },\n            \"text\": {\n                \"status\": \"additional\",\n                \"div\": \"<div xmlns=\\\"http://www.w3.org/1999/xhtml\\\">reject p6hjus</div>\"\n            }\n        },\n        {\n            \"code\": {\n                \"coding\": [\n                    {\n                        \"system\": \"https://fhir.ee/CodeSystem/tervisetoendi-sektsioon\",\n                        \"code\": \"change-reason\"\n                    }\n                ]\n            },\n            \"text\": {\n                \"status\": \"additional\",\n                \"div\": \"<div xmlns=\\\"http://www.w3.org/1999/xhtml\\\">muutmise p6hjus</div>\"\n            }\n        },\n        {\n            \"code\": {\n                \"coding\": [\n                    {\n                        \"system\": \"https://fhir.ee/CodeSystem/tervisetoendi-sektsioon\",\n                        \"code\": \"employer-suggestions\"\n                    }\n                ]\n            },\n            \"text\": {\n                \"status\": \"additional\",\n                \"div\": \"<div xmlns=\\\"http://www.w3.org/1999/xhtml\\\">Ettepanekud tööandjale</div>\"\n            }\n        },\n        {\n            \"code\": {\n                \"coding\": [\n                    {\n                        \"system\": \"https://fhir.ee/CodeSystem/tervisetoendi-sektsioon\",\n                        \"code\": \"employee-suggestions\"\n                    }\n                ]\n            },\n            \"text\": {\n                \"status\": \"additional\",\n                \"div\": \"<div xmlns=\\\"http://www.w3.org/1999/xhtml\\\">Ettepanekud töötajale</div>\"\n            }\n        }\n    ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{X_ROAD_SERVER_URL}}/r1/{{X_ROAD_ENV}}/{{X_ROAD_HCERT_SERVICE}}/Composition",
+              "host": [
+                "{{X_ROAD_SERVER_URL}}"
+              ],
+              "path": [
+                "r1",
+                "{{X_ROAD_ENV}}",
+                "{{X_ROAD_HCERT_SERVICE}}",
+                "Composition"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. Occupational certs queried by employer",
+      "item": [
+        {
+          "name": "2.1 Get token as employer (org legal representative)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.collectionVariables.set(\"org_legal_rep_token\", pm.response.json().accessToken);",
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-road-client",
+                "value": "{{X_ROAD_ENV}}/{{X_ROAD_CLIENT}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user\": {\n    \"personalCode\": \"36201182245\"\n  },\n  \"organization\": \"70009770\", // should match with xroad client organization\n  \"representedParty\": \"{{EMPLOYER_CODE}}\", // should match with organization user repesents (employer org)\n  \"role\": \"org-legal-representative\",\n  \"application\": \"teis-app\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{X_ROAD_SERVER_URL}}/r1/{{X_ROAD_ENV}}/{{X_ROAD_AUTH_SERVICE}}/v2/token",
+              "host": [
+                "{{X_ROAD_SERVER_URL}}"
+              ],
+              "path": [
+                "r1",
+                "{{X_ROAD_ENV}}",
+                "{{X_ROAD_AUTH_SERVICE}}",
+                "v2",
+                "token"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "2.2 Search all final certificates for specific employer org",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Total field is greater than 0\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.total).to.be.greaterThan(0);",
+                  "});",
+                  "",
+                  "// Extract resource ID from first entry and save to collection variable",
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.entry && jsonData.entry.length > 0 && jsonData.entry[0].resource && jsonData.entry[0].resource.id) {",
+                  "    pm.collectionVariables.set(\"OCCUP_CERT_ID\", jsonData.entry[0].resource.id);",
+                  "}"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{org_legal_rep_token}}",
+                "type": "text"
+              },
+              {
+                "key": "x-road-client",
+                "value": "{{X_ROAD_ENV}}/{{X_ROAD_CLIENT}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{X_ROAD_SERVER_URL}}/r1/{{X_ROAD_ENV}}/{{X_ROAD_HCERT_SERVICE}}/Composition?category=occupational&status=final,cancelled&section-code-text=employer${{EMPLOYER_CODE}}",
+              "host": [
+                "{{X_ROAD_SERVER_URL}}"
+              ],
+              "path": [
+                "r1",
+                "{{X_ROAD_ENV}}",
+                "{{X_ROAD_HCERT_SERVICE}}",
+                "Composition"
+              ],
+              "query": [
+                {
+                  "key": "category",
+                  "value": "occupational"
+                },
+                {
+                  "key": "status",
+                  "value": "final,cancelled"
+                },
+                {
+                  "key": "section-code-text",
+                  "value": "employer${{EMPLOYER_CODE}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "2.3 Load single certificate for specific employer org",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{org_legal_rep_token}}",
+                "type": "text"
+              },
+              {
+                "key": "x-road-client",
+                "value": "{{X_ROAD_ENV}}/{{X_ROAD_CLIENT}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{X_ROAD_SERVER_URL}}/r1/{{X_ROAD_ENV}}/{{X_ROAD_HCERT_SERVICE}}/Composition/{{OCCUP_CERT_ID}}",
+              "host": [
+                "{{X_ROAD_SERVER_URL}}"
+              ],
+              "path": [
+                "r1",
+                "{{X_ROAD_ENV}}",
+                "{{X_ROAD_HCERT_SERVICE}}",
+                "Composition",
+                "{{OCCUP_CERT_ID}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. Occupational certs queried by government official",
+      "item": [
+        {
+          "name": "3.1 Get token as government official",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.collectionVariables.set(\"gov_off_token\", pm.response.json().accessToken);",
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-road-client",
+                "value": "{{X_ROAD_ENV}}/{{X_ROAD_CLIENT}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user\": {\n    \"personalCode\": \"36201182245\"\n  },\n  \"organization\": \"70009770\", // should match with xroad client organization\n \"representedParty\": \"70001969\", // necessary only for TEHIK internal testing\n  \"role\": \"gov-official\",\n  \"application\": \"teis-app\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{X_ROAD_SERVER_URL}}/r1/{{X_ROAD_ENV}}/{{X_ROAD_AUTH_SERVICE}}/v2/token",
+              "host": [
+                "{{X_ROAD_SERVER_URL}}"
+              ],
+              "path": [
+                "r1",
+                "{{X_ROAD_ENV}}",
+                "{{X_ROAD_AUTH_SERVICE}}",
+                "v2",
+                "token"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "3.1 Search all final certificates",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Total field is greater than 0\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.total).to.be.greaterThan(0);",
+                  "});",
+                  "",
+                  "// Extract resource ID from first entry and save to collection variable",
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.entry && jsonData.entry.length > 0 && jsonData.entry[0].resource && jsonData.entry[0].resource.id) {",
+                  "    pm.collectionVariables.set(\"OCCUP_CERT_ID\", jsonData.entry[0].resource.id);",
+                  "}"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{gov_off_token}}",
+                "type": "text"
+              },
+              {
+                "key": "x-road-client",
+                "value": "{{X_ROAD_ENV}}/{{X_ROAD_CLIENT}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{X_ROAD_SERVER_URL}}/r1/{{X_ROAD_ENV}}/{{X_ROAD_HCERT_SERVICE}}/Composition?category=occupational&status=final,cancelled",
+              "host": [
+                "{{X_ROAD_SERVER_URL}}"
+              ],
+              "path": [
+                "r1",
+                "{{X_ROAD_ENV}}",
+                "{{X_ROAD_HCERT_SERVICE}}",
+                "Composition"
+              ],
+              "query": [
+                {
+                  "key": "category",
+                  "value": "occupational"
+                },
+                {
+                  "key": "status",
+                  "value": "final,cancelled"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "3.2 Load single certificate",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{gov_off_token}}",
+                "type": "text"
+              },
+              {
+                "key": "x-road-client",
+                "value": "{{X_ROAD_ENV}}/{{X_ROAD_CLIENT}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{X_ROAD_SERVER_URL}}/r1/{{X_ROAD_ENV}}/{{X_ROAD_HCERT_SERVICE}}/Composition/{{OCCUP_CERT_ID}}",
+              "host": [
+                "{{X_ROAD_SERVER_URL}}"
+              ],
+              "path": [
+                "r1",
+                "{{X_ROAD_ENV}}",
+                "{{X_ROAD_HCERT_SERVICE}}",
+                "Composition",
+                "{{OCCUP_CERT_ID}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "2.2 Search all final certificates for specific employer org",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Total field is greater than 0\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.total).to.be.greaterThan(0);",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{gov_off_token}}",
+                "type": "text"
+              },
+              {
+                "key": "x-road-client",
+                "value": "{{X_ROAD_ENV}}/{{X_ROAD_CLIENT}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{X_ROAD_SERVER_URL}}/r1/{{X_ROAD_ENV}}/{{X_ROAD_HCERT_SERVICE}}/Composition?category=occupational&status=final,cancelled&section-code-text=employer${{EMPLOYER_CODE}}",
+              "host": [
+                "{{X_ROAD_SERVER_URL}}"
+              ],
+              "path": [
+                "r1",
+                "{{X_ROAD_ENV}}",
+                "{{X_ROAD_HCERT_SERVICE}}",
+                "Composition"
+              ],
+              "query": [
+                {
+                  "key": "category",
+                  "value": "occupational"
+                },
+                {
+                  "key": "status",
+                  "value": "final,cancelled"
+                },
+                {
+                  "key": "section-code-text",
+                  "value": "employer${{EMPLOYER_CODE}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "4. Driver certificate operations by doctor",
+      "item": [
+        {
+          "name": "4.1 Doctor token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.collectionVariables.set(\"doctor_token\", pm.response.json().accessToken);",
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-road-client",
+                "value": "{{X_ROAD_ENV}}/{{X_ROAD_CLIENT}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user\": {\n    \"personalCode\": \"45007090928\"\n  },\n  \"organization\": \"70009770\",\n  \"role\": \"doctor\",\n  \"application\": \"test-app\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{X_ROAD_SERVER_URL}}/r1/{{X_ROAD_ENV}}/{{X_ROAD_AUTH_SERVICE}}/v2/token",
+              "host": [
+                "{{X_ROAD_SERVER_URL}}"
+              ],
+              "path": [
+                "r1",
+                "{{X_ROAD_ENV}}",
+                "{{X_ROAD_AUTH_SERVICE}}",
+                "v2",
+                "token"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4.2 Search Patient by identifier",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Should return 200\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const responseData = pm.response.json();",
+                  "const patientReference = responseData.entry[0].resource.id;",
+                  "pm.collectionVariables.set(\"PATIENT_ID2\", patientReference);"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{doctor_token}}",
+                "type": "text"
+              },
+              {
+                "key": "x-road-client",
+                "value": "{{X_ROAD_ENV}}/{{X_ROAD_CLIENT}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{X_ROAD_SERVER_URL}}/r1/{{X_ROAD_ENV}}/{{X_ROAD_MPI_SERVICE}}/Patient?identifier={{EST_PATIENT_CODE2}}",
+              "host": [
+                "{{X_ROAD_SERVER_URL}}"
+              ],
+              "path": [
+                "r1",
+                "{{X_ROAD_ENV}}",
+                "{{X_ROAD_MPI_SERVICE}}",
+                "Patient"
+              ],
+              "query": [
+                {
+                  "key": "identifier",
+                  "value": "{{EST_PATIENT_CODE2}}"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4.3 Create preliminary certificate",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "       const location = pm.response.headers.get(\"Location\");",
+                  "        if (!location) {",
+                  "          console.error(\"Location header is missing from the response.\");",
+                  "          return;",
+                  "        }",
+                  "        pm.expect(location).to.exist;",
+                  "        const urlParts = location.split(\"/\");",
+                  "",
+                  "        const certificateId = urlParts[urlParts.length - 3];",
+                  "        pm.collectionVariables.set(\"CERTIFICATE_ID\", certificateId);",
+                  "    ",
+                  "",
+                  "        const cerificateVersion = urlParts[urlParts.length - 1];",
+                  "        pm.collectionVariables.set(\"CERTIFICATE_VERSION\", cerificateVersion);"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const uuid = pm.variables.replaceIn('{{$randomUUID}}');",
+                  "pm.collectionVariables.set(\"DOC_NUMBER\", uuid);"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{doctor_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Prefer",
+                "value": "return=representation",
+                "type": "text"
+              },
+              {
+                "key": "x-road-client",
+                "value": "{{X_ROAD_ENV}}/{{X_ROAD_CLIENT}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"resourceType\": \"Composition\",\n    \"meta\": {\n        \"profile\": [\n            \"https://fhir.ee/hcert/StructureDefinition/ee-health-certificate-driver\"\n        ]\n    },\n    \"contained\": [\n        {\n            \"resourceType\": \"PractitionerRole\",\n            \"id\": \"pract-role\",\n            \"practitioner\": {\n                \"reference\": \"Practitioner/45007090928\"\n            },\n            \"organization\": {\n                \"reference\": \"Organization/70009770\"\n            }\n        }\n    ],\n    \"identifier\": [\n        {\n            \"system\": \"https://fhir.ee/hcert/health-certificate-number\",\n            \"value\": \"HCERT-{{DOC_NUMBER}}\"\n        }\n    ],\n    \"status\": \"preliminary\",\n    \"type\": {\n        \"coding\": [\n            {\n                \"system\": \"http://snomed.info/sct\",\n                \"code\": \"772786005\",\n                \"display\": \"Medical certificate (record artifact)\"\n            }\n        ]\n    },\n    \"category\": [\n        {\n            \"coding\": [\n                {\n                    \"system\": \"https://fhir.ee/CodeSystem/labivaatuse-tyyp\",\n                    \"code\": \"driver-group-I\"\n                }\n            ]\n        }\n    ],\n    \"subject\": [\n        {\n            \"reference\": \"Patient/{{PATIENT_ID2}}\"\n        }\n    ],\n    \"date\": \"2025-11-26T00:00:00.000+00:00\",\n    \"author\": [\n        {\n            \"reference\": \"#pract-role\"\n        }\n    ],\n    \"title\": \"MSJ tervisekontroll\",\n    \"event\": [\n        {\n            \"period\": {\n                \"start\": \"2025-11-26T00:00:00.000+00:00\",\n                \"end\": \"2035-11-26T00:00:00.000+00:00\"\n            }\n        }\n    ],\n    \"section\": [\n        {\n            \"code\": {\n                \"coding\": [\n                    {\n                        \"system\": \"https://fhir.ee/CodeSystem/tervisetoendi-sektsioon\",\n                        \"code\": \"health-declaration\"\n                    }\n                ]\n            },\n            \"entry\": [\n                {\n                    \"identifier\": {\n                        \"system\": \"https://fhir.ee/hcert/health-declaration-external-document-number\",\n                        \"value\": \"HD-12345\"\n                    }\n                }\n            ]\n        }\n    ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{X_ROAD_SERVER_URL}}/r1/{{X_ROAD_ENV}}/{{X_ROAD_HCERT_SERVICE}}/Composition",
+              "host": [
+                "{{X_ROAD_SERVER_URL}}"
+              ],
+              "path": [
+                "r1",
+                "{{X_ROAD_ENV}}",
+                "{{X_ROAD_HCERT_SERVICE}}",
+                "Composition"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4.4 Load preliminary certificate",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{doctor_token}}",
+                "type": "text"
+              },
+              {
+                "key": "x-road-client",
+                "value": "{{X_ROAD_ENV}}/{{X_ROAD_CLIENT}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{X_ROAD_SERVER_URL}}/r1/{{X_ROAD_ENV}}/{{X_ROAD_HCERT_SERVICE}}/Composition/{{CERTIFICATE_ID}}",
+              "host": [
+                "{{X_ROAD_SERVER_URL}}"
+              ],
+              "path": [
+                "r1",
+                "{{X_ROAD_ENV}}",
+                "{{X_ROAD_HCERT_SERVICE}}",
+                "Composition",
+                "{{CERTIFICATE_ID}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4.5 Update preliminary certificate",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "       const location = pm.response.headers.get(\"Location\");",
+                  "        if (!location) {",
+                  "          console.error(\"Location header is missing from the response.\");",
+                  "          return;",
+                  "        }",
+                  "        pm.expect(location).to.exist;",
+                  "        const urlParts = location.split(\"/\");",
+                  "",
+                  "        const certificateId = urlParts[urlParts.length - 3];",
+                  "        pm.collectionVariables.set(\"CERTIFICATE_ID\", certificateId);",
+                  "    ",
+                  "",
+                  "        const cerificateVersion = urlParts[urlParts.length - 1];",
+                  "        pm.collectionVariables.set(\"CERTIFICATE_VERSION\", cerificateVersion);"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{doctor_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Prefer",
+                "value": "return=representation",
+                "type": "text"
+              },
+              {
+                "key": "x-road-client",
+                "value": "{{X_ROAD_ENV}}/{{X_ROAD_CLIENT}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"resourceType\": \"Composition\",\n    \"meta\": {\n        \"profile\": [\n            \"https://fhir.ee/hcert/StructureDefinition/ee-health-certificate-driver\"\n        ]\n    },\n    \"contained\": [\n        {\n            \"resourceType\": \"PractitionerRole\",\n            \"id\": \"pract-role\",\n            \"practitioner\": {\n                \"reference\": \"Practitioner/45007090928\"\n            },\n            \"organization\": {\n                \"reference\": \"Organization/70009770\"\n            }\n        }\n    ],\n    \"identifier\": [\n        {\n            \"system\": \"https://fhir.ee/hcert/health-certificate-number\",\n            \"value\": \"HCERT-{{DOC_NUMBER}}\"\n        }\n    ],\n    \"status\": \"preliminary\",\n    \"type\": {\n        \"coding\": [\n            {\n                \"system\": \"http://snomed.info/sct\",\n                \"code\": \"772786005\",\n                \"display\": \"Medical certificate (record artifact)\"\n            }\n        ]\n    },\n    \"category\": [\n        {\n            \"coding\": [\n                {\n                    \"system\": \"https://fhir.ee/CodeSystem/labivaatuse-tyyp\",\n                    \"code\": \"driver-group-I\"\n                }\n            ]\n        }\n    ],\n    \"subject\": [\n        {\n            \"reference\": \"Patient/{{PATIENT_ID2}}\"\n        }\n    ],\n    \"date\": \"2025-11-26T00:00:00.000+00:00\",\n    \"author\": [\n        {\n            \"reference\": \"#pract-role\"\n        }\n    ],\n    \"title\": \"MSJ tervisekontroll\",\n    \"event\": [\n        {\n            \"period\": {\n                \"start\": \"2025-11-26T00:00:00.000+00:00\",\n                \"end\": \"2035-11-26T00:00:00.000+00:00\"\n            }\n        }\n    ],\n    \"section\": [\n        {\n            \"code\": {\n                \"coding\": [\n                    {\n                        \"system\": \"https://fhir.ee/CodeSystem/tervisetoendi-sektsioon\",\n                        \"code\": \"health-declaration\"\n                    }\n                ]\n            },\n            \"entry\": [\n                {\n                    \"identifier\": {\n                        \"system\": \"https://fhir.ee/hcert/health-declaration-external-document-number\",\n                        \"value\": \"HD-12345\"\n                    }\n                }\n            ]\n        }\n    ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{X_ROAD_SERVER_URL}}/r1/{{X_ROAD_ENV}}/{{X_ROAD_HCERT_SERVICE}}/Composition/{{CERTIFICATE_ID}}",
+              "host": [
+                "{{X_ROAD_SERVER_URL}}"
+              ],
+              "path": [
+                "r1",
+                "{{X_ROAD_ENV}}",
+                "{{X_ROAD_HCERT_SERVICE}}",
+                "Composition",
+                "{{CERTIFICATE_ID}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4.6 Load preliminary certificate whole history",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{doctor_token}}",
+                "type": "text"
+              },
+              {
+                "key": "x-road-client",
+                "value": "{{X_ROAD_ENV}}/{{X_ROAD_CLIENT}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{X_ROAD_SERVER_URL}}/r1/{{X_ROAD_ENV}}/{{X_ROAD_HCERT_SERVICE}}/Composition/{{CERTIFICATE_ID}}/_history",
+              "host": [
+                "{{X_ROAD_SERVER_URL}}"
+              ],
+              "path": [
+                "r1",
+                "{{X_ROAD_ENV}}",
+                "{{X_ROAD_HCERT_SERVICE}}",
+                "Composition",
+                "{{CERTIFICATE_ID}}",
+                "_history"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4.7 Make certificate final, add decision",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "       const location = pm.response.headers.get(\"Location\");",
+                  "        if (!location) {",
+                  "          console.error(\"Location header is missing from the response.\");",
+                  "          return;",
+                  "        }",
+                  "        pm.expect(location).to.exist;",
+                  "        const urlParts = location.split(\"/\");",
+                  "",
+                  "        const certificateId = urlParts[urlParts.length - 3];",
+                  "        pm.collectionVariables.set(\"CERTIFICATE_ID\", certificateId);",
+                  "    ",
+                  "",
+                  "        const cerificateVersion = urlParts[urlParts.length - 1];",
+                  "        pm.collectionVariables.set(\"CERTIFICATE_VERSION\", cerificateVersion);"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{doctor_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Prefer",
+                "value": "return=representation",
+                "type": "text"
+              },
+              {
+                "key": "x-road-client",
+                "value": "{{X_ROAD_ENV}}/{{X_ROAD_CLIENT}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"resourceType\": \"Composition\",\n    \"meta\": {\n        \"profile\": [\n            \"https://fhir.ee/hcert/StructureDefinition/ee-health-certificate-driver\"\n        ]\n    },\n    \"contained\": [\n        {\n            \"resourceType\": \"PractitionerRole\",\n            \"id\": \"pract-role\",\n            \"practitioner\": {\n                \"reference\": \"Practitioner/45007090928\"\n            },\n            \"organization\": {\n                \"reference\": \"Organization/70009770\"\n            }\n        },\n        {\n            \"resourceType\": \"Observation\",\n            \"id\": \"decision\",\n            \"meta\": {\n                \"profile\": [\n                    \"https://fhir.ee/hcert/StructureDefinition/ee-health-certificate-decision\"\n                ]\n            },\n            \"status\": \"final\",\n            \"code\": {\n                \"coding\": [\n                    {\n                        \"system\": \"http://snomed.info/sct\",\n                        \"code\": \"419183001\",\n                        \"display\": \"Practitioner decision status\"\n                    }\n                ]\n            },\n            \"valueCodeableConcept\": {\n                \"coding\": [\n                    {\n                        \"system\": \"http://snomed.info/sct\",\n                        \"code\": \"171353001\"\n                    }\n                ]\n            }\n        }\n    ],\n    \"identifier\": [\n        {\n            \"system\": \"https://fhir.ee/hcert/health-certificate-number\",\n            \"value\": \"HCERT-{{DOC_NUMBER}}\"\n        }\n    ],\n    \"status\": \"final\",\n    \"type\": {\n        \"coding\": [\n            {\n                \"system\": \"http://snomed.info/sct\",\n                \"code\": \"772786005\",\n                \"display\": \"Medical certificate (record artifact)\"\n            }\n        ]\n    },\n    \"category\": [\n        {\n            \"coding\": [\n                {\n                    \"system\": \"https://fhir.ee/CodeSystem/labivaatuse-tyyp\",\n                    \"code\": \"driver-group-I\"\n                }\n            ]\n        }\n    ],\n    \"subject\": [\n        {\n            \"reference\": \"Patient/{{PATIENT_ID2}}\"\n        }\n    ],\n    \"date\": \"2025-11-26T00:00:00.000+00:00\",\n    \"author\": [\n        {\n            \"reference\": \"#pract-role\"\n        }\n    ],\n    \"title\": \"MSJ tervisekontroll\",\n    \"event\": [\n        {\n            \"period\": {\n                \"start\": \"2025-11-26T00:00:00.000+00:00\",\n                \"end\": \"2035-11-26T00:00:00.000+00:00\"\n            }\n        }\n    ],\n    \"section\": [\n        {\n            \"code\": {\n                \"coding\": [\n                    {\n                        \"system\": \"https://fhir.ee/CodeSystem/tervisetoendi-sektsioon\",\n                        \"code\": \"health-declaration\"\n                    }\n                ]\n            },\n            \"entry\": [\n                {\n                    \"identifier\": {\n                        \"system\": \"https://fhir.ee/hcert/health-declaration-external-document-number\",\n                        \"value\": \"HD-12345\"\n                    }\n                }\n            ]\n        },\n        {\n            \"code\": {\n                \"coding\": [\n                    {\n                        \"system\": \"https://fhir.ee/CodeSystem/tervisetoendi-sektsioon\",\n                        \"code\": \"decision\"\n                    }\n                ]\n            },\n            \"entry\": [\n                {\n                    \"reference\": \"#decision\"\n                }\n            ]\n        }\n    ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{X_ROAD_SERVER_URL}}/r1/{{X_ROAD_ENV}}/{{X_ROAD_HCERT_SERVICE}}/Composition/{{CERTIFICATE_ID}}",
+              "host": [
+                "{{X_ROAD_SERVER_URL}}"
+              ],
+              "path": [
+                "r1",
+                "{{X_ROAD_ENV}}",
+                "{{X_ROAD_HCERT_SERVICE}}",
+                "Composition",
+                "{{CERTIFICATE_ID}}"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4.8 Suspend certificate",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "       const location = pm.response.headers.get(\"Location\");",
+                  "        if (!location) {",
+                  "          console.error(\"Location header is missing from the response.\");",
+                  "          return;",
+                  "        }",
+                  "        pm.expect(location).to.exist;",
+                  "        const urlParts = location.split(\"/\");",
+                  "",
+                  "        const certificateId = urlParts[urlParts.length - 3];",
+                  "        pm.collectionVariables.set(\"CERTIFICATE_ID\", certificateId);",
+                  "    ",
+                  "",
+                  "        const cerificateVersion = urlParts[urlParts.length - 1];",
+                  "        pm.collectionVariables.set(\"CERTIFICATE_VERSION\", cerificateVersion);"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{doctor_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Prefer",
+                "value": "return=representation",
+                "type": "text"
+              },
+              {
+                "key": "x-road-client",
+                "value": "{{X_ROAD_ENV}}/{{X_ROAD_CLIENT}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"resourceType\": \"Parameters\",\n    \"parameter\": [\n        {\n            \"name\": \"reason\",\n            \"valueString\": \"peatamise põhjus XXX\"\n        }\n    ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{X_ROAD_SERVER_URL}}/r1/{{X_ROAD_ENV}}/{{X_ROAD_HCERT_SERVICE}}/Composition/{{CERTIFICATE_ID}}/$suspend",
+              "host": [
+                "{{X_ROAD_SERVER_URL}}"
+              ],
+              "path": [
+                "r1",
+                "{{X_ROAD_ENV}}",
+                "{{X_ROAD_HCERT_SERVICE}}",
+                "Composition",
+                "{{CERTIFICATE_ID}}",
+                "$suspend"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "4.9 Cancel certificate",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "       const location = pm.response.headers.get(\"Location\");",
+                  "        if (!location) {",
+                  "          console.error(\"Location header is missing from the response.\");",
+                  "          return;",
+                  "        }",
+                  "        pm.expect(location).to.exist;",
+                  "        const urlParts = location.split(\"/\");",
+                  "",
+                  "        const certificateId = urlParts[urlParts.length - 3];",
+                  "        pm.collectionVariables.set(\"CERTIFICATE_ID\", certificateId);",
+                  "    ",
+                  "",
+                  "        const cerificateVersion = urlParts[urlParts.length - 1];",
+                  "        pm.collectionVariables.set(\"CERTIFICATE_VERSION\", cerificateVersion);"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{doctor_token}}",
+                "type": "text"
+              },
+              {
+                "key": "Prefer",
+                "value": "return=representation",
+                "type": "text"
+              },
+              {
+                "key": "x-road-client",
+                "value": "{{X_ROAD_ENV}}/{{X_ROAD_CLIENT}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"resourceType\": \"Parameters\",\n    \"parameter\": [\n        {\n            \"name\": \"reason\",\n            \"valueString\": \"tühistamise põhjus XXX\"\n        }\n    ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{X_ROAD_SERVER_URL}}/r1/{{X_ROAD_ENV}}/{{X_ROAD_HCERT_SERVICE}}/Composition/{{CERTIFICATE_ID}}/$cancel",
+              "host": [
+                "{{X_ROAD_SERVER_URL}}"
+              ],
+              "path": [
+                "r1",
+                "{{X_ROAD_ENV}}",
+                "{{X_ROAD_HCERT_SERVICE}}",
+                "Composition",
+                "{{CERTIFICATE_ID}}",
+                "$cancel"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "5. Driver certs queried by government official",
+      "item": [
+        {
+          "name": "5.1 Get token as government official",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.variables.set(\"gov_off_tram_token\", pm.response.json().accessToken);",
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-road-client",
+                "value": "{{X_ROAD_ENV}}/{{X_ROAD_CLIENT}}",
+                "type": "text"
+              },
+              {
+                "key": "x-road-id",
+                "value": "{{$guid}}",
+                "type": "text"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"user\": {\n    \"personalCode\": \"36201182245\"\n  },\n  \"organization\": \"70009770\", // should match with xroad client organization\n \"representedParty\": \"70001490\", // necessary only for TEHIK internal testing\n  \"role\": \"gov-official\",\n  \"application\": \"teis-app\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{X_ROAD_SERVER_URL}}/r1/{{X_ROAD_ENV}}/{{X_ROAD_AUTH_SERVICE}}/v2/token",
+              "host": [
+                "{{X_ROAD_SERVER_URL}}"
+              ],
+              "path": [
+                "r1",
+                "{{X_ROAD_ENV}}",
+                "{{X_ROAD_AUTH_SERVICE}}",
+                "v2",
+                "token"
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "5.1a Session info",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "var jsonData = pm.response.json();",
+                  "",
+                  "pm.test(\"Has gov-official role\", function () {",
+                  "    pm.expect(jsonData.claims.role).to.be.eq('gov-official');",
+                  "});",
+                  "",
+                  "pm.test(\"Has hcert.driver-certificate.read permission\", function () {",
+                  "    let hasPermission = false;",
+                  "    jsonData.permissions.forEach(permission=>{",
+                  "    if(permission === 'hcert.driver-certificate.read'){",
+                  "        hasPermission = true;",
+                  "    }",
+                  "    pm.expect(hasPermission).to.be.true;",
+                  "    });",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{gov_off_tram_token}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{CHARON_URL}}/v2/session-info?app=hcert",
+              "host": [
+                "{{CHARON_URL}}"
+              ],
+              "path": [
+                "v2",
+                "session-info"
+              ],
+              "query": [
+                {
+                  "key": "app",
+                  "value": "hcert"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "5.2 Search all final certificates",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"Total field is greater than 0\", function () {",
+                  "    var jsonData = pm.response.json();",
+                  "    pm.expect(jsonData.total).to.be.greaterThan(0);",
+                  "});",
+                  "",
+                  "// Extract resource ID from first entry and save to collection variable",
+                  "var jsonData = pm.response.json();",
+                  "if (jsonData.entry && jsonData.entry.length > 0 && jsonData.entry[0].resource && jsonData.entry[0].resource.id) {",
+                  "    pm.collectionVariables.set(\"DRIVER_CERT_ID\", jsonData.entry[0].resource.id);",
+                  "}"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{gov_off_tram_token}}",
+                "type": "text"
+              },
+              {
+                "key": "x-road-client",
+                "value": "{{X_ROAD_ENV}}/{{X_ROAD_CLIENT}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{X_ROAD_SERVER_URL}}/r1/{{X_ROAD_ENV}}/{{X_ROAD_HCERT_SERVICE}}/Composition?category=driver-group-I,driver-group-II&status=final,cancelled",
+              "host": [
+                "{{X_ROAD_SERVER_URL}}"
+              ],
+              "path": [
+                "r1",
+                "{{X_ROAD_ENV}}",
+                "{{X_ROAD_HCERT_SERVICE}}",
+                "Composition"
+              ],
+              "query": [
+                {
+                  "key": "category",
+                  "value": "driver-group-I,driver-group-II"
+                },
+                {
+                  "key": "status",
+                  "value": "final,cancelled"
+                }
+              ]
+            }
+          },
+          "response": []
+        },
+        {
+          "name": "5.3 Load single certificate",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test(\"Status code is 200\", function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            },
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  ""
+                ],
+                "type": "text/javascript",
+                "packages": {},
+                "requests": {}
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{gov_off_tram_token}}",
+                "type": "text"
+              },
+              {
+                "key": "x-road-client",
+                "value": "{{X_ROAD_ENV}}/{{X_ROAD_CLIENT}}",
+                "type": "text"
+              }
+            ],
+            "url": {
+              "raw": "{{X_ROAD_SERVER_URL}}/r1/{{X_ROAD_ENV}}/{{X_ROAD_HCERT_SERVICE}}/Composition/{{DRIVER_CERT_ID}}",
+              "host": [
+                "{{X_ROAD_SERVER_URL}}"
+              ],
+              "path": [
+                "r1",
+                "{{X_ROAD_ENV}}",
+                "{{X_ROAD_HCERT_SERVICE}}",
+                "Composition",
+                "{{DRIVER_CERT_ID}}"
+              ]
+            }
+          },
+          "response": []
+        }
+      ]
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "packages": {},
+        "requests": {},
+        "exec": [
+          ""
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "X_ROAD_SERVER_URL",
+      "value": "https://10.0.13.90"
+    },
+    {
+      "key": "X_ROAD_ENV",
+      "value": "ee-dev"
+    },
+    {
+      "key": "X_ROAD_CLIENT",
+      "value": "GOV/70009770/tto-tis-klient"
+    },
+    {
+      "key": "X_ROAD_AUTH_SERVICE",
+      "value": "GOV/70009770/tis/auth"
+    },
+    {
+      "key": "X_ROAD_HCERT_SERVICE",
+      "value": "GOV/70009770/tis/fhir"
+    },
+    {
+      "key": "X_ROAD_MPI_SERVICE",
+      "value": "GOV/70009770/tis/fhir"
+    },
+    {
+      "key": "HCERT_URL",
+      "value": "https://tis.dev.tehik.ee/hcert"
+    },
+    {
+      "key": "EMPLOYER_CODE",
+      "value": "16978044"
+    },
+    {
+      "key": "PATIENT_ID",
+      "value": "517685"
+    },
+    {
+      "key": "EST_PATIENT_CODE",
+      "value": "37207279996"
+    },
+    {
+      "key": "EST_PATIENT_CODE2",
+      "value": "36808088873"
+    },
+    {
+      "key": "doctor_token",
+      "value": ""
+    },
+    {
+      "key": "CERTIFICATE_ID",
+      "value": ""
+    },
+    {
+      "key": "CERTIFICATE_VERSION",
+      "value": ""
+    },
+    {
+      "key": "org_legal_rep_token",
+      "value": ""
+    },
+    {
+      "key": "OCCUP_CERT_ID",
+      "value": ""
+    },
+    {
+      "key": "gov_off_token",
+      "value": ""
+    },
+    {
+      "key": "PATIENT_ID2",
+      "value": ""
+    },
+    {
+      "key": "DOC_NUMBER",
+      "value": ""
+    },
+    {
+      "key": "DRIVER_CERT_ID",
+      "value": ""
+    }
+  ]
 }
