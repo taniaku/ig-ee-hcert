@@ -54,12 +54,7 @@ Usage: #inline
 * code = $SCT#225891002 "Fit for work with certain limitations"
 * valueCodeableConcept = WorkAdditionalConditionCS#personal-protective-equipment
 
-Instance: OccupationalHealthCertExample
-InstanceOf: EEHealthCertificateOccupational
-Title: "Töötervishoiu tervisekontrolli otsus"
-Description: "Mustand olekus töötervishoiu tervisekontrolli otsus, osaliselt täidetud ressursi näidis"
-Usage: #example
-* id = "1100"
+RuleSet: OccupationalHealthCertificateBase
 * identifier[0]
   * system = "https://fhir.ee/hcert/health-certificate-number"
   * value = "DOC-12345"
@@ -118,6 +113,24 @@ Usage: #example
 * section[employerSuggestions]
   * text.status = #additional
   * text.div = "<div xmlns=\"http://www.w3.org/1999/xhtml\">Töötajale on vaja parem valgustus</div>"
+
+Instance: OccupationalHealthCertExample
+InstanceOf: EEHealthCertificateOccupational
+Title: "Töötervishoiu tervisekontrolli otsus"
+Description: "Mustand olekus töötervishoiu tervisekontrolli otsus, osaliselt täidetud ressursi näidis"
+Usage: #example
+* id = "1100"
+* insert OccupationalHealthCertificateBase
 * section[employeeSuggestions]
   * text.status = #additional
   * text.div = "<div xmlns=\"http://www.w3.org/1999/xhtml\">Tööandja peab paigaldama uut valgustust</div>"
+
+Instance: OccupationalEmployerHealthCertExample
+InstanceOf: EEHealthCertificateOccupationalEmployer
+Title: "Töötervishoiu tervisekontrolli otsus tööandjale"
+Description: "Mustand olekus töötervishoiu tervisekontrolli otsus tööandjale, osaliselt täidetud ressursi näidis"
+Usage: #example
+* id = "1110"
+* insert OccupationalHealthCertificateBase
+* subject.identifier.system = "https://fhir.ee/sid/pid/est/ni"
+* subject.identifier.value = "37605030299"
