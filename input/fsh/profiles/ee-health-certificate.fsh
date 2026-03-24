@@ -16,7 +16,7 @@ Description: "Tervisetõendi baasprofiil"
 * identifier.system = "https://fhir.ee/hcert/health-certificate-number"
 * identifier.value 1..1
 * status ^short = "Tõendi staatus"
-* status from StatusVS (required)
+* status from TervisetoendiStaatusFHIR (required)
 * type ^short = "Composition ressursi tüüp. Fikseeritud väärtus"
 * type.coding = $SCT#772786005 "Medical certificate (record artifact)"
 * category 1..1
